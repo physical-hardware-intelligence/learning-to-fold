@@ -297,6 +297,8 @@ Nothing here is assumed. Each row says how it was checked.
 | 19 | a dataset download exits 0 but a subset is missing | `hf` ≥ 1.0 takes one pattern per `--include` and reads the rest as file names, then warns *"Ignoring `--include` since filenames have been explicitly set"*. `hf` 0.35 wanted space-separated patterns instead, so no single spelling works on both | one `--include` per call (B3), then verify the counts | `[mac]` 2026-09-28: 3 of 4 subsets arrived · `huggingface_hub/cli/download.py`: 0.35.3 `nargs="*"`, 1.25.1 a typer `list[str]` option |
 | 20 | policy moves oddly, **no error**; one arm or joint is ignored | the runner's `state_dict_to_vec12` uses `obs.get(name, 0.0)`: a joint name our robot doesn't emit is sent as **0.0**, silently | in the Mac port (D1), assert all 12 `MOTOR_NAMES` are present before the first request | `[code: real_robot_config.py:52]` |
 | 21 | every request takes ~0.4 s longer than the model needs | `websockets` compresses each 6 MB message by default (`compression="deflate"`) | `compression=None` in the client's `connect()`; the server falls back to plain frames | `[box]` 2026-10-03: 667 → 279 ms |
+| 22 | the sim install log shows `Failed to build flatdict==4.0.1` (`No module named 'pkg_resources'`), yet the install works | `isaaclab.sh` builds `flatdict` in an isolated env with current setuptools, which no longer ships `pkg_resources`. `setup.sh` hides the error (`2>/dev/null \|\| true`) | expected: the next steps install `setuptools<70`, then `flatdict==4.0.1 --no-build-isolation`. Judge the install by `uv pip list` (6 `isaaclab*` + `lehome`) | `[box]` 2026-10-17 |
+| 23 | (not hit) the simulator env silently changes under you | `uv run` / `uv sync` inside `lehome-challenge/` first syncs the env to its lockfile, but the IsaacLab step changed it after that sync | run the simulator with `lehome-challenge/.venv/bin/python`, as Ilia's eval worker does; never `uv sync` there after setup. The real env is recorded with `uv pip freeze` | `[box]` 2026-10-17 dry runs: `uv run` would change 10 packages (setuptools 69.5.1 → 80.10.1, gymnasium 1.2.1 → 1.2.3, …) and add torchaudio; `uv sync` would uninstall 85 · `[code: scripts/eval_worker.py:67]` |
 
 ---
 
@@ -525,12 +527,12 @@ baseline   "hold": repeat state[t] five times — a predictor that does nothing
 
 | gate | passes when | by |
 |---|---|---|
-| **S1** | Isaac Sim + lehome installed without sudo; the simulator starts headless | **Fri Oct 24 (kill date)** |
+| **S1** | Isaac Sim + lehome installed without sudo; the simulator starts headless | ✅ **passed 2026-10-17** (kill date was Oct 24) |
 | **S2** | 2 episodes × every garment complete, no crash; GPU peak + time per episode recorded | Oct 27 |
 | **S3** | his success rate on his evaluation setting. **The pass rule is written here before the run** | Nov 7 `[estimate]` |
 
-**Scripts** (`scripts/lehome/sim/`): `setup_sim_box.sh` (replaces setup.sh step 5: no hidden errors, IsaacLab fork pinned to `69f6fa5`, NVIDIA's license accepted only by explicit opt-in) · `gpu_guard.sh` (go/no-go on a shared GPU) · `run_sim_eval.sh` (one recorded run: versions, GPU trace every 5 s, log).
-**Pins:** `lehome_sim` @ `79dcf9e` · `lehome/asset_challenge` @ `bea65fd` · lehome-challenge @ `5ea947e` · warp-lang 1.12.1 · flatdict 4.0.1.
+**Scripts** (`scripts/lehome/sim/`): `setup_sim_box.sh` (replaces setup.sh step 5: no hidden errors, IsaacLab fork pinned to `69f6fa5`, NVIDIA's license accepted only by explicit opt-in) · `gpu_guard.sh` (go/no-go on a shared GPU) · `s1_headless_check.py` (S1: starts Isaac Sim the way the eval worker does) · `run_sim_eval.sh` (one recorded run: versions, GPU trace every 5 s, log).
+**Pins:** `lehome_sim` @ `79dcf9e` · `lehome/asset_challenge` @ `bea65fd` · lehome-challenge @ `5ea947e` · warp-lang 1.12.1 · flatdict 4.0.1 · torch 2.7.0+cu126 (the challenge's lockfile takes it from PyPI; its pyproject lists a cu128 index).
 
 ### Phase D — Integrate
 
@@ -683,9 +685,10 @@ _Filled in as each gate lands._
 - **2026-09-28** B5/B6 tool `scripts/lehome/replay_gate.py` built and self-tested on the laptop. The dry run measured the 6.14 MB request; against a hold-still stand-in the gate FAILs as it should. The protocol alone costs ~130–146 ms per request (§6). Trap 20 found while reading the runner: missing joint names become 0.0 silently.
 - **2026-09-28** Box owner OK'd GPU use and the file copy. Files copied and re-verified on the box by hash. **B4** server up in ~1 min; it uses **~6 GB, not 12.8** (§3.3 corrected). **B5**, shared GPU: 763 ms median. **B6: FAIL by its pre-set rule.** Policy 0.40× hold ✅ and C3 ✅, but C1 1.18× and C2 1.28× missed the 1.5× bar. Post-hoc, every control is worse with CIs clear of 1.0, so the plumbing looks right and the bar was mis-set. A corrected criterion is written into B6 before any re-run. Transport alone on the box: 516 ms (§6).
 - **2026-09-28** Rule v2 written into B6 at 19:40, before run 2, with a hashed record. **Run 2 PASS** on episodes 15/46/77/108, replicating run 1. Clean **M1: 679 ms** (488 ms of it transport). **Gate B green**, five days early.
-- **2026-10-17** Track S (simulation) started: pins recorded, sim checkpoint + assets downloading at pinned revisions, box install scripts written. S1 kill date Oct 24.
 - **2026-10-03** D1: runner ported to the Mac and link-tested against the real server (no arms yet). From the Mac via the Tailscale relay: 2.46 s per request, so client-side 224² frames are next.
 - **2026-10-03** Speed cause found: websocket compression (trap 21). Client-side `compression=None` cuts a request from **667 to 279 ms**. `replay_gate.py` now defaults to it (`--compression`).
+- **2026-10-17** Track S (simulation) started: pins recorded, sim checkpoint + assets downloading at pinned revisions, box install scripts written. S1 kill date Oct 24.
+- **2026-10-17** **S1 passed.** Install 3 min 40 s, no sudo. Its one `flatdict` build error is expected (trap 22). Isaac Sim starts headless with cameras in 56 s; GPU peak 490 MiB; nothing left on the GPU after. The installed env differs from the challenge's lockfile in 10 packages after the IsaacLab step, so it is recorded with `uv pip freeze` (293 packages) and never re-synced (trap 23).
 
 ## References
 

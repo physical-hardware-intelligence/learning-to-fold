@@ -10,6 +10,7 @@ Plan: [`experiments/2026-09-27_learning-to-fold-so101.md`](../../experiments/202
 | `verify_hub_download.py` | Proves a Hugging Face download is complete: every file's size and hash |
 | `sim/setup_sim_box.sh` | Installs the simulator on the GPU box (Isaac Sim 5.1, IsaacLab fork, lehome). No sudo, stops on any error, accepts NVIDIA's license only with `ACCEPT_ISAACSIM_EULA=yes` |
 | `sim/gpu_guard.sh` | Go/no-go before any GPU work on the shared box |
+| `sim/s1_headless_check.py` | Gate S1: starts Isaac Sim the way the eval worker does (headless, cameras on) and reports each stage's time |
 | `sim/run_sim_eval.sh` | One simulation evaluation, fully recorded (versions, GPU every 5 s, log) |
 | `LICENSE.lehome_solution` | Ilia's Apache-2.0 license, covering the two files taken from his repo |
 
