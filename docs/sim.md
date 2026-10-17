@@ -144,7 +144,7 @@ tail -f ~/phi/logs/sim/*-smoke/eval.log
 nvidia-smi
 ```
 
-**How long a run takes** (measured 2026-10-17): about 3.5 min to start (model server 24 s, Isaac Sim 14 s, garment 80 s, simulation set-up 69 s, first two model calls ~50 s while it compiles), then 0.4 to 0.6 s per step. A fold that succeeds ends early (329 steps took 190 s); a failed episode runs all 600 steps, about 6 min. GPU peak with the model and one simulator: 12.0 GB of 16.
+**How long a run takes** (measured 2026-10-17): about 3.5 min to start (model server 24 s, Isaac Sim 14 s, garment 80 s, simulation set-up 69 s, first two model calls ~50 s while it compiles), then 0.4 to 0.6 s per step. A fold that succeeds ends early (329 steps took 190 s); a failed episode runs all 600 steps, about 6 min. GPU peak with the model and one simulator: 11,993 MiB of the card's 16,376 MiB (12,127 MiB in S2).
 
 **`run_eval.py` options that matter:**
 
@@ -201,9 +201,9 @@ nvidia-smi
 | 10:27:21 | hash check on the box | ✅ checkpoint 28/28, assets 447/447 (10 s) |
 | 10:27 | garments in the assets | 4 types × 12: per type 2 unseen + 10 seen, so 8 unseen and 48 in all |
 | 10:27:45 | GPU check | **GO**: 14 MiB used, no other jobs |
-| 10:27:57 → 10:35:22 | **one episode** (`one`: `Top_Long_Unseen_1`, seed 1627694679 from `--rl_seed 0`) | ✅ **folded: Success=True in 329 steps** (3.7 s of simulated physics) · run 7 min 25 s, of which the episode 190 s · cameras 640×480 rendering · garment type detected right (top_long) · GPU peak 12.0 GB, 100% at times · clean shutdown, nothing left on the GPU |
+| 10:27:57 → 10:35:22 | **one episode** (`one`: `Top_Long_Unseen_1`, seed 1627694679 from `--rl_seed 0`) | ✅ **folded: Success=True in 329 steps** (3.7 s of simulated physics) · run 7 min 25 s, of which the episode 190 s · cameras 640×480 rendering · garment type detected right (top_long) · GPU peak 11,993 MiB, utilisation 100% at times · clean shutdown, nothing left on the GPU |
 | 13:22:34 | GPU check | **GO**: 14 MiB used, no other jobs (a second user was logged in, not using the GPU) |
-| 13:22:34 → 14:09:24 | **S2 smoke** (`smoke`: 2 × the 8 unseen garments, seeds fixed; `gpu_yield.sh` beside it) | ✅ **S2 passed**: 16 of 16 episodes ran, no crash. **13 of 16 folded**: long pants 3/4, short pants 3/4, long tops 4/4, short tops 3/4. 46.8 min in all. GPU peak 12.1 GB. One episode ended by the stuck detector. The watcher never had to act. Nothing left on the GPU |
+| 13:22:34 → 14:09:24 | **S2 smoke** (`smoke`: 2 × the 8 unseen garments, seeds fixed; `gpu_yield.sh` beside it) | ✅ **S2 passed**: 16 of 16 episodes ran, no crash. **13 of 16 folded**: long pants 3/4, short pants 3/4, long tops 4/4, short tops 3/4. 46.8 min in all. GPU peak 12,127 MiB. One episode ended by the stuck detector. The watcher never had to act. Nothing left on the GPU |
 
 **Facts that shaped this:**
 - ⚠️ `run_eval.py` **accepts the Isaac Sim license on every start** (`OMNI_KIT_ACCEPT_EULA=YES`). We accepted it explicitly on 2026-10-17, before anything ran.
