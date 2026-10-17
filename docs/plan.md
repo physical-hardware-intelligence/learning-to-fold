@@ -3,7 +3,7 @@
 **Status**: 🟡 **Phase 0 running.** **Gate B green 2026-09-28**: server runs, wiring verified (B6 run 2 PASS), M1 679 ms. Tracks A and C open. · **Owner**: Yash · **Created**: 2026-09-27 · **Ladder**: L4
 **Tracks**: A Knowledge — *open, no hardware needed* · B Server — Yash · C Rig — Sai, Parv
 
-> The club's laundry goal. We start from the strongest public bimanual folding policy for **our exact arm**, prove we can run it, measure it on our rig, then improve it. The sister experiment, [Real-Time EXPO-FT](2026-09-26_realtime-expo-ft-so101.md), builds the real-robot reward + critic loop that Phase G here will need.
+> The club's laundry goal. We start from the strongest public bimanual folding policy for **our exact arm**, prove we can run it, measure it on our rig, then improve it. The sister experiment, [Real-Time EXPO-FT](https://github.com/physical-hardware-intelligence/phi/blob/main/experiments/2026-09-26_realtime-expo-ft-so101.md), builds the real-robot reward + critic loop that Phase G here will need.
 
 **How to use this doc.** Work top to bottom. Every phase ends in a **gate**: a check that is allowed to fail. Don't start a phase until its inputs are green. Tick boxes in the PR that completes them; every number goes in [Results](#results).
 
@@ -77,12 +77,12 @@ noise (30 × 12) ─► Gemma-300M action expert, 10 Euler steps ─────
 | fact | value |
 |---|---|
 | lineage | π₀.₅ → his BEHAVIOR-1K winner → this `[paper §4]` |
-| size | π₀.₅ class, ~3.5B parameters (`lerobot/pi05_base` is 3.5B, [pi05 experiment](2026-09-15_pi05-cubcyl-lang.md)) |
+| size | π₀.₅ class, ~3.5B parameters (`lerobot/pi05_base` is 3.5B, [pi05 experiment](https://github.com/physical-hardware-intelligence/phi/blob/main/experiments/2026-09-15_pi05-cubcyl-lang.md)) |
 | output | 30 actions × 12 joints, predicted as **deltas** from the current state `[code: training/config.py:810]` |
 | horizon | 30 steps = **1.5 s at 20 Hz** (real), 1.0 s at 30 Hz (sim) `[derived]` |
 | executed | first **5** of 30, then re-plan `[README]` |
 | language | **none**. Text input dropped entirely `[paper §4]` |
-| generator | flow matching: start from noise, walk toward a valid chunk in 10 steps `[paper §7.1]`. Background: [diffusion-policy-why](../docs/theory/diffusion-policy-why.md), [smolvla §15](../docs/theory/smolvla.md) |
+| generator | flow matching: start from noise, walk toward a valid chunk in 10 steps `[paper §7.1]`. Background: [diffusion-policy-why](https://github.com/physical-hardware-intelligence/phi/blob/main/docs/theory/diffusion-policy-why.md), [smolvla §15](https://github.com/physical-hardware-intelligence/phi/blob/main/docs/theory/smolvla.md) |
 
 **Why generate instead of regress:** there are many valid ways to fold a sleeve. Averaging two valid grasps gives an invalid one. A generator samples *one* of them.
 
@@ -247,7 +247,7 @@ Nothing here is assumed. Each row says how it was checked.
 | missing | `websockets` | `[mac]` |
 | robot-side JAX? | **none.** The runner's import chain has no jax/openpi | `[code]` grep |
 | GPU box | RTX 4080 SUPER 16 GB, driver 580.173.02, Ubuntu 22.04, **no sudo**, 1.1 TB free, Tailscale relay ~29 ms | `[box]` |
-| training GPU | Explorer H200 (141 GB), `gpu` partition, 8 h wall | [pi05 experiment](2026-09-15_pi05-cubcyl-lang.md) |
+| training GPU | Explorer H200 (141 GB), `gpu` partition, 8 h wall | [pi05 experiment](https://github.com/physical-hardware-intelligence/phi/blob/main/experiments/2026-09-15_pi05-cubcyl-lang.md) |
 | server env | Python **3.11 exactly**, `jax[cuda12]==0.5.3`, `torch==2.7.1` (cu126) | `[code: pyproject.toml]` |
 | pinned deps | openpi `c23745b`, lehome-challenge `5ea947e` | `[code]` `git ls-tree HEAD` |
 | lockfile | **none**: `uv.lock` is gitignored, so `uv sync` resolves fresh. Only the pins above are fixed | `[code: .gitignore:5]` |
@@ -278,7 +278,7 @@ Nothing here is assumed. Each row says how it was checked.
 |---|---|---|---|---|
 | 1 | every joint ~10% off, looks fine on screen | units: normalised ±100 vs degrees | `use_degrees=True` everywhere; `wrist_roll` beyond ±100 proves degrees | `[paper §9.11]` |
 | 2 | `wrist_roll` range halved | follower and leader in different units | same units on all four arms | `[code: record_real_dagger.py:882]`, lerobot #3176 |
-| 3 | policy erratic, **no error raised** | camera key wrong | keys exactly `right_front / left_wrist / right_wrist`; replay-gate controls catch it | `[code]`; our [pi05 run](2026-09-15_pi05-cubcyl-lang.md) hit the silent version |
+| 3 | policy erratic, **no error raised** | camera key wrong | keys exactly `right_front / left_wrist / right_wrist`; replay-gate controls catch it | `[code]`; our [pi05 run](https://github.com/physical-hardware-intelligence/phi/blob/main/experiments/2026-09-15_pi05-cubcyl-lang.md) hit the silent version |
 | 4 | top view geometry off | a 4:3 top camera pads differently from their 16:9 | capture the top at **1280×720** | `[code: observation.py:434]` |
 | 5 | arm frozen most of the time | 6.1 MB of raw frames per request across a relay | §6 | `[derived]` |
 | 6 | `No keyboard found under /dev/input/event*` | `evdev` is Linux-only | replace with `pynput` | `[code: :212]`, `[mac]` |
@@ -377,7 +377,7 @@ Read in this order. Each row says why it cannot be skipped.
 | A1 | [**Learning to Fold** 2606.27163](https://arxiv.org/abs/2606.27163): §1, §2, §10 first, then the rest | the map; §10 is his list of open problems | 3 h |
 | A2 | 🔴 [**BEHAVIOR-1K solution** 2512.06951](https://arxiv.org/abs/2512.06951) | **mandatory.** Correlated noise, soft inpainting, cross-layer KV mixing and multi-sample flow matching are explained **only** here `[paper §4]` | 2 h |
 | A3 | [π₀.₅ 2504.16054](https://arxiv.org/abs/2504.16054) | the base model | 2 h |
-| A4 | [Flow matching 2210.02747](https://arxiv.org/abs/2210.02747) + our [diffusion-policy-why](../docs/theory/diffusion-policy-why.md) | the generator | 2 h |
+| A4 | [Flow matching 2210.02747](https://arxiv.org/abs/2210.02747) + our [diffusion-policy-why](https://github.com/physical-hardware-intelligence/phi/blob/main/docs/theory/diffusion-policy-why.md) | the generator | 2 h |
 | A5 | [AWR 1910.00177](https://arxiv.org/abs/1910.00177) · [π*₀.₆ / RECAP 2511.14759](https://arxiv.org/abs/2511.14759) | the two RL halves | 3 h |
 | A6 | [GAE 1506.02438](https://arxiv.org/abs/1506.02438) · [CFG 2207.12598](https://arxiv.org/abs/2207.12598) · [FAST 2501.09747](https://arxiv.org/abs/2501.09747) | the machinery | 2 h |
 | A7 | [LeHome env 2604.22363](https://arxiv.org/abs/2604.22363) · [his blog](https://ilialarchenko.com/projects/lehome2026) | the benchmark and the checker | 2 h |
@@ -434,7 +434,7 @@ for g in top_long top_short pant_long pant_short; do
       --revision 5a28286fb60db8bf9fab9a552a001645722752cd --local-dir data/lehome_real --include "${g}_merged/*"
 done
 ```
-  **Then prove it:** [`scripts/lehome/verify_hub_download.py`](../scripts/lehome/verify_hub_download.py) checks every file's size and hash against the Hub's listing. `fetch` saves the listing into the folder wherever the Hub is reachable; `check` runs wherever the files are.
+  **Then prove it:** [`scripts/verify_hub_download.py`](../scripts/verify_hub_download.py) checks every file's size and hash against the Hub's listing. `fetch` saves the listing into the folder wherever the Hub is reachable; `check` runs wherever the files are.
   Use the **per-garment subsets**: the merged set ships one generic task string and no garment label `[README]`, and B6 needs the true label. Sizes `[HF]`: 1.38 + 1.31 + 0.95 + 0.84 = 4.48 GB, the same total as the merged set; ~15 GB with the checkpoint.
   ⚠️ **2026-09-28: our GPU box can't reach `huggingface.co`** (trap 17). The files are downloaded on a laptop at pinned Hub revisions, model `03b26d3` and dataset `5a28286`, then copied over SSH with the box owner's OK. Check after copying: 27 files / 10,492,307,528 B and 51 files / 4,479,323,893 B.
 - [ ] **B4** Start the server with the real-round flags `[README]`:
@@ -474,7 +474,7 @@ baseline   "hold": repeat state[t] five times — a predictor that does nothing
   **Pass, fixed before the first run** `[estimate]`: policy error < 0.5 × hold · each of C1–C3 raises error > 1.5× · holds on the mean of 3 seeds.
   **Scope:** these are frames it trained on. This gate tests the plumbing — keys, units, resize, normalisation — not generalisation.
   **No arms, no network.** It can also run as a batch job on Explorer if the box is busy.
-  **Tool:** [`scripts/lehome/replay_gate.py`](../scripts/lehome/replay_gate.py), built 2026-09-28. It sends exactly what Ilia's robot client sends, with each piece cited to his code, and reads the organizer files with pyarrow + PyAV, so it doesn't depend on a lerobot version. Episodes 0, 31, 62, 93, 124 per garment; 10 frames each; 3,000 requests in all. Tested so far `[mac]`:
+  **Tool:** [`scripts/replay_gate.py`](../scripts/replay_gate.py), built 2026-09-28. It sends exactly what Ilia's robot client sends, with each piece cited to his code, and reads the organizer files with pyarrow + PyAV, so it doesn't depend on a lerobot version. Episodes 0, 31, 62, 93, 124 per garment; 10 frames each; 3,000 requests in all. Tested so far `[mac]`:
   - `dry-run`: 200 samples, **6.14 MB per request (the §6 figure, now measured)**, hold baseline **3.841**, so the policy must reach **< 1.92**.
   - Against a stand-in server that only holds still: **FAIL, exit 1**, with policy = hold (1.000×) and C1–C3 unchanged (1.00×). The gate rejects a do-nothing server.
   - **Run against the real server, 2026-09-28 `[box]`: FAIL by the rule above.** 3,000 requests. Policy **1.538 = 0.40× hold** ✅. C3 **2.19×** ✅. **C1 1.18× ❌ and C2 1.28× ❌**, both below the 1.5× bar. Pass means 1.545 / 1.537 / 1.531. C4 2.88×.
@@ -500,7 +500,7 @@ baseline   "hold": repeat state[t] five times — a predictor that does nothing
 
 ### Track C — Rig · Sai, Parv
 
-- [ ] **C1** Calibrate under the ids **his runner hardcodes**, so one calibration serves plain teleop now and his runner later: followers **`bimanual_follower_left`** / **`_right`**, leaders **`bimanual_leader_left`** / **`_right`** (`--robot_id` defaults to `bimanual_follower`, the leader id is fixed at `bimanual_leader` `[code: record_real_dagger.py:847, :890]`; sub-arms are `{id}_left/_right` `[mac]`). The existing pair keeps its calibration: copy `robots/so_follower/phi_follower.json` → `bimanual_follower_left.json` and `teleoperators/so_leader/phi_leader.json` → `bimanual_leader_left.json`. Only the new pair needs `lerobot-calibrate`. The assembled Kit Pro ships with motor ids set, so skip `setup-motors` ([02-setup](../docs/robots/so-arm101/02-setup.md))
+- [ ] **C1** Calibrate under the ids **his runner hardcodes**, so one calibration serves plain teleop now and his runner later: followers **`bimanual_follower_left`** / **`_right`**, leaders **`bimanual_leader_left`** / **`_right`** (`--robot_id` defaults to `bimanual_follower`, the leader id is fixed at `bimanual_leader` `[code: record_real_dagger.py:847, :890]`; sub-arms are `{id}_left/_right` `[mac]`). The existing pair keeps its calibration: copy `robots/so_follower/phi_follower.json` → `bimanual_follower_left.json` and `teleoperators/so_leader/phi_leader.json` → `bimanual_leader_left.json`. Only the new pair needs `lerobot-calibrate`. The assembled Kit Pro ships with motor ids set, so skip `setup-motors` ([02-setup](https://github.com/physical-hardware-intelligence/phi/blob/main/docs/robots/so-arm101/02-setup.md))
 - [ ] **C2** Mount the followers **46 cm apart** on one rigid board `[README]`. Clamps drift.
 - [ ] **C3** Cameras, named exactly as the organizer's:
 
@@ -531,17 +531,17 @@ baseline   "hold": repeat state[t] five times — a predictor that does nothing
 | **S2** | 2 episodes × every garment complete, no crash; GPU peak + time per episode recorded | Oct 27 |
 | **S3** | his success rate on his evaluation setting. **The pass rule is written here before the run** | Nov 7 `[estimate]` |
 
-**Scripts** (`scripts/lehome/sim/`): `setup_sim_box.sh` (replaces setup.sh step 5: no hidden errors, IsaacLab fork pinned to `69f6fa5`, NVIDIA's license accepted only by explicit opt-in) · `gpu_guard.sh` (go/no-go on a shared GPU) · `s1_headless_check.py` (S1: starts Isaac Sim the way the eval worker does) · `run_sim_eval.sh` (one recorded run: versions, GPU trace every 5 s, log).
+**Scripts** (`scripts/sim/`): `setup_sim_box.sh` (replaces setup.sh step 5: no hidden errors, IsaacLab fork pinned to `69f6fa5`, NVIDIA's license accepted only by explicit opt-in) · `gpu_guard.sh` (go/no-go on a shared GPU) · `s1_headless_check.py` (S1: starts Isaac Sim the way the eval worker does) · `run_sim_eval.sh` (one recorded run: versions, GPU trace every 5 s, log).
 **Pins:** `lehome_sim` @ `79dcf9e` · `lehome/asset_challenge` @ `bea65fd` · lehome-challenge @ `5ea947e` · warp-lang 1.12.1 · flatdict 4.0.1 · torch 2.7.0+cu126 (the challenge's lockfile takes it from PyPI; its pyproject lists a cu128 index).
 
 ### Phase D — Integrate
 
 - [x] **D1** Port the runner to macOS + lerobot 0.6.0 (§8). Apache-2.0: keep the notice, list every change.
-  ✅ **2026-10-03:** [`scripts/lehome/record_real_dagger_mac.py`](../scripts/lehome/README.md), 10 marked changes, plus a `--dry_run` mode in which nothing moves. Tested from the Mac against the real server with demo frames: correct moves, garment auto-detect right for all 4 types, and a missing joint is refused. Not yet run with arms and cameras.
+  ✅ **2026-10-03:** [`scripts/record_real_dagger_mac.py`](../scripts/README.md), 10 marked changes, plus a `--dry_run` mode in which nothing moves. Tested from the Mac against the real server with demo frames: correct moves, garment auto-detect right for all 4 types, and a missing joint is refused. Not yet run with arms and cameras.
 - [ ] **D2 · M2** Mac → box throughput: `time scp` a 100 MB file, both directions.
 - [ ] **D3 · M3** End-to-end `t_req` from the Mac. Apply the §6 decision rule.
   **First reading, 2026-10-03, via the Tailscale relay (off campus): 2.46 s median** with full-size frames. Rule 1 fails, so **a′ (224² frames from the client)** is next; re-measure on campus with a direct path.
-- [ ] **D4** First autonomous episode. Start with **shorts** — shortest fold (13.6 s) and his easiest type in sim (93.5%). Safety: torque is already capped at 50% ([control-loop §3](../docs/theory/control-loop.md)); set `max_relative_target` on both followers `[mac]`; hand on `SPACE` to take over.
+- [ ] **D4** First autonomous episode. Start with **shorts** — shortest fold (13.6 s) and his easiest type in sim (93.5%). Safety: torque is already capped at 50% ([control-loop §3](https://github.com/physical-hardware-intelligence/phi/blob/main/docs/theory/control-loop.md)); set `max_relative_target` on both followers `[mac]`; hand on `SPACE` to take over.
 
 **🚪 Gate D:** one episode runs to success or timeout with no faults · `t_req` logged · video saved.
 
@@ -554,7 +554,7 @@ Run the §9 protocol: **4 garments × 20 trials = 80 trials**, no training.
 ### Phase F — Fine-tune · November
 
 - [ ] **F1** Collect with the ported runner, DAgger mode. **Easy starts first**: his stated regret is chasing hard initial states when the final used mostly easy ones `[paper §9.10]`.
-- [ ] **F2** Explorer env in `/scratch`: Python 3.11, `uv`, `jax[cuda12]`, `PYTHONNOUSERSITE=1` ([pi05 lessons](2026-09-15_pi05-cubcyl-lang.md)). Smoke job on `sharing` first — our π₀.₅ run found two blockers that way.
+- [ ] **F2** Explorer env in `/scratch`: Python 3.11, `uv`, `jax[cuda12]`, `PYTHONNOUSERSITE=1` ([pi05 lessons](https://github.com/physical-hardware-intelligence/phi/blob/main/experiments/2026-09-15_pi05-cubcyl-lang.md)). Smoke job on `sharing` first — our π₀.₅ run found two blockers that way.
 - [ ] **F3** **Decision: normalisation stats.** Default: keep his `real_bc` stats, so step 0 sees the inputs it was trained on. Recomputing over the union is the A/B.
 - [ ] **F4** Train from `lehome_real` params. Our speed factor = our mean fold time ÷ the organizer's, per garment (his method `[paper §9.9]`). Resolve trap 13 first. Chain 8 h jobs with `scripts/train.py --resume`.
 - [ ] **F5** Re-run the §9 protocol. Apply the pre-registered comparison.
@@ -571,9 +571,9 @@ See §12. Starts only after F.
 | piece | reuse | write |
 |---|---|---|
 | policy server | `scripts/serve.py`, unchanged | — |
-| replay gate | organizer dataset + the client's message format | `scripts/lehome/replay_gate.py`, with C1–C4 · ✅ written 2026-09-28, self-tested, not yet run live |
-| download check | the Hub's own file listing | `scripts/lehome/verify_hub_download.py` · ✅ 2026-09-28 |
-| Mac robot client ✅ 2026-10-03 | `scripts/record_real_dagger.py` | move 2 imports · `evdev` → `pynput` (grant the terminal *Input Monitoring*) · `pip install websockets` · macOS ports (`/dev/tty.usbmodem*`) and camera indices in `configs/lehome/real_robot_mac.yaml` · optional 224² client-side resize (§6) |
+| replay gate | organizer dataset + the client's message format | `scripts/replay_gate.py`, with C1–C4 · ✅ written 2026-09-28, self-tested, not yet run live |
+| download check | the Hub's own file listing | `scripts/verify_hub_download.py` · ✅ 2026-09-28 |
+| Mac robot client ✅ 2026-10-03 | `scripts/record_real_dagger.py` | move 2 imports · `evdev` → `pynput` (grant the terminal *Input Monitoring*) · `pip install websockets` · macOS ports (`/dev/tty.usbmodem*`) and camera indices in `configs/real_robot_mac.yaml` · optional 224² client-side resize (§6) |
 | overlay tool | `scripts/real_camera_align.py` | only the Mac yaml |
 | second wrist mount | the existing wrist mount | print a mirror |
 | Explorer training | `scripts/train.py --resume`, `configs/train_real_bc.yaml` | `configs/hpc/train_lehome_real.sbatch` |
@@ -647,7 +647,7 @@ Resolve each row before the phase named.
 | # | idea | why it's worth it | needs |
 |---|---|---|---|
 | 1 | **Bandit-tuned inference on the real robot** | in sim he tuned 7 knobs online by Thompson sampling and called it *"a big win that cost no extra training"* `[paper §10.1]`. In the real round he ran them **fixed**. Zero training cost; no real-robot version exists in his work `[my reading]` | a success label per episode (a human, at our scale) |
-| 2 | **A real-side value function** → advantage conditioning + best-of-N on real | his biggest regret; his 90%+ guess `[paper §10.5]`. Candidate signal: `Present_Load` / `Present_Current`, free on our servo bus ([control-loop §2](../docs/theory/control-loop.md)) — mind the 30 Hz aliasing caveat there | EXPO-FT's reward + critic loop |
+| 2 | **A real-side value function** → advantage conditioning + best-of-N on real | his biggest regret; his 90%+ guess `[paper §10.5]`. Candidate signal: `Present_Load` / `Present_Current`, free on our servo bus ([control-loop §2](https://github.com/physical-hardware-intelligence/phi/blob/main/docs/theory/control-loop.md)) — mind the 30 Hz aliasing caveat there | EXPO-FT's reward + critic loop |
 | 3 | **DAgger weighted by value**, not his hand-tuned ramp | he calls his scheme *"deliberately crude"* `[paper §9.10]` | #2 |
 | 4 | **Recovery without a human** | the stated open problem `[paper §10.4]` | — |
 | 5 | **A model small enough for the Mac** | *"this task could be solved with a much smaller model"* `[paper §10.2]`. Removes the network problem entirely. We already train SmolVLA | Phase F data |
@@ -677,18 +677,19 @@ _Filled in as each gate lands._
 ## Log
 
 - **2026-09-27** Created. Every §3 fact verified from source, the Hub, or the Mac env on this date.
-- **Correction, 2026-09-27:** an earlier plan (chat, 2026-09-24) said fine-tuning "will not fit 16 GB" and deferred it. True for the 4080 — but Explorer's H200, the same GPU Ilia used, is already in club use ([pi05](2026-09-15_pi05-cubcyl-lang.md)). Fine-tuning moves to Explorer.
+- **Correction, 2026-09-27:** an earlier plan (chat, 2026-09-24) said fine-tuning "will not fit 16 GB" and deferred it. True for the 4080 — but Explorer's H200, the same GPU Ilia used, is already in club use ([pi05](https://github.com/physical-hardware-intelligence/phi/blob/main/experiments/2026-09-15_pi05-cubcyl-lang.md)). Fine-tuning moves to Explorer.
 - **2026-09-28** B1 re-checked line by line against `setup.sh` and `pyproject.toml` before first run. No conda (uv supplies 3.11), save the resolved `uv.lock` (upstream has none), two unneeded installs dropped. Traps 15–16 added; three `setup.sh` line citations corrected.
 - **2026-09-28** **B0–B2 done.** Upstream `main` is still `ca73828`, so our pin is his latest. B1 built cleanly in 1 min 40 s; **B2 passes**: JAX sees the RTX 4080 SUPER. Traps 10 and 15 don't apply on our box: the `libcuda` link, CUDA 12 NPP and FFmpeg with AV1 are already installed. Next: B3 downloads; B4 waits for an idle GPU, since another lab job held 3.5 GB and the server wants 12.8.
 - **2026-09-28** B3: the GPU box's network resets TLS connections to `huggingface.co` (trap 17). Downloads go through a laptop at pinned Hub revisions, then SSH, pending the box owner's OK.
-- **2026-09-28** B3 on the laptop: **both downloads verified** by size and hash against the Hub listing. Checkpoint 27/27 files, 10,492,307,528 B; dataset 51/51 files, 4,479,323,893 B. Found on the way: traps 18 (Xet stall) and 19 (`--include` parsing changed in `hf` 1.x, which silently dropped one subset). New tool: `scripts/lehome/verify_hub_download.py`.
-- **2026-09-28** B5/B6 tool `scripts/lehome/replay_gate.py` built and self-tested on the laptop. The dry run measured the 6.14 MB request; against a hold-still stand-in the gate FAILs as it should. The protocol alone costs ~130–146 ms per request (§6). Trap 20 found while reading the runner: missing joint names become 0.0 silently.
+- **2026-09-28** B3 on the laptop: **both downloads verified** by size and hash against the Hub listing. Checkpoint 27/27 files, 10,492,307,528 B; dataset 51/51 files, 4,479,323,893 B. Found on the way: traps 18 (Xet stall) and 19 (`--include` parsing changed in `hf` 1.x, which silently dropped one subset). New tool: `scripts/verify_hub_download.py`.
+- **2026-09-28** B5/B6 tool `scripts/replay_gate.py` built and self-tested on the laptop. The dry run measured the 6.14 MB request; against a hold-still stand-in the gate FAILs as it should. The protocol alone costs ~130–146 ms per request (§6). Trap 20 found while reading the runner: missing joint names become 0.0 silently.
 - **2026-09-28** Box owner OK'd GPU use and the file copy. Files copied and re-verified on the box by hash. **B4** server up in ~1 min; it uses **~6 GB, not 12.8** (§3.3 corrected). **B5**, shared GPU: 763 ms median. **B6: FAIL by its pre-set rule.** Policy 0.40× hold ✅ and C3 ✅, but C1 1.18× and C2 1.28× missed the 1.5× bar. Post-hoc, every control is worse with CIs clear of 1.0, so the plumbing looks right and the bar was mis-set. A corrected criterion is written into B6 before any re-run. Transport alone on the box: 516 ms (§6).
 - **2026-09-28** Rule v2 written into B6 at 19:40, before run 2, with a hashed record. **Run 2 PASS** on episodes 15/46/77/108, replicating run 1. Clean **M1: 679 ms** (488 ms of it transport). **Gate B green**, five days early.
 - **2026-10-03** D1: runner ported to the Mac and link-tested against the real server (no arms yet). From the Mac via the Tailscale relay: 2.46 s per request, so client-side 224² frames are next.
 - **2026-10-03** Speed cause found: websocket compression (trap 21). Client-side `compression=None` cuts a request from **667 to 279 ms**. `replay_gate.py` now defaults to it (`--compression`).
 - **2026-10-17** Track S (simulation) started: pins recorded, sim checkpoint + assets downloading at pinned revisions, box install scripts written. S1 kill date Oct 24.
 - **2026-10-17** **S1 passed.** Install 3 min 40 s, no sudo. Its one `flatdict` build error is expected (trap 22). Isaac Sim starts headless with cameras in 56 s; GPU peak 490 MiB; nothing left on the GPU after. The installed env differs from the challenge's lockfile in 10 packages after the IsaacLab step, so it is recorded with `uv pip freeze` (293 packages) and never re-synced (trap 23).
+- **2026-10-17** Moved out of the phi repo into its own repo, `learning-to-fold`, with its history (phi PR #8, closed unmerged). Paths: plan → `docs/plan.md`, `scripts/lehome/` → `scripts/`, `configs/lehome/` → `configs/`; links into phi now point at phi's `main`.
 
 ## References
 
@@ -696,4 +697,4 @@ _Filled in as each gate lands._
 
 **Code & data**: [lehome_solution](https://github.com/IliaLarchenko/lehome_solution) @ `ca73828` (Apache-2.0) · [lehome_real](https://huggingface.co/IliaLarchenko/lehome_real) · [lehome_sim](https://huggingface.co/IliaLarchenko/lehome_sim) · [dataset_challenge_real](https://huggingface.co/datasets/lehome/dataset_challenge_real) · [official challenge](https://github.com/lehome-official/lehome-challenge)
 
-**Repo**: [control-loop](../docs/theory/control-loop.md) · [smolvla](../docs/theory/smolvla.md) · [diffusion-policy-why](../docs/theory/diffusion-policy-why.md) · [Real-Time EXPO-FT](2026-09-26_realtime-expo-ft-so101.md) · [π₀.₅ cubes/cylinder](2026-09-15_pi05-cubcyl-lang.md)
+**Repo**: [control-loop](https://github.com/physical-hardware-intelligence/phi/blob/main/docs/theory/control-loop.md) · [smolvla](https://github.com/physical-hardware-intelligence/phi/blob/main/docs/theory/smolvla.md) · [diffusion-policy-why](https://github.com/physical-hardware-intelligence/phi/blob/main/docs/theory/diffusion-policy-why.md) · [Real-Time EXPO-FT](https://github.com/physical-hardware-intelligence/phi/blob/main/experiments/2026-09-26_realtime-expo-ft-so101.md) · [π₀.₅ cubes/cylinder](https://github.com/physical-hardware-intelligence/phi/blob/main/experiments/2026-09-15_pi05-cubcyl-lang.md)

@@ -1,0 +1,16 @@
+# macOS (the working copy often lives on an exFAT drive, which collects these)
+._*
+.DS_Store
+
+# machine-specific config: serial ports, camera indices
+*.local.yaml
+
+# large local data: downloads, checkpoints, run outputs
+checkpoints/
+data/
+outputs/
+
+# Python
+__pycache__/
+*.pyc
+.venv/

@@ -32,7 +32,7 @@ Reproducibility: the server's noise starts at `jax.random.key(0)` on launch and 
 call (openpi `policies/policy.py:65`), and requests go out in a fixed order, one at a time. A
 freshly started server reproduces every number. Needs: numpy, pyarrow, av (PyAV), websockets.
 
-Plan: experiments/2026-09-27_learning-to-fold-so101.md, Track B, B5 and B6.
+Plan: docs/plan.md, Track B, B5 and B6.
 """
 from __future__ import annotations
 

@@ -4,7 +4,9 @@
 #   * fail loudly: setup.sh hides every error with `2>/dev/null || true`; here a failing step stops the run
 #   * pinned versions: lehome-challenge @ 5ea947e (submodule), IsaacLab fork @ 69f6fa5 (setup.sh clones main)
 #   * NVIDIA's Isaac Sim license is accepted ONLY when you set ACCEPT_ISAACSIM_EULA=yes
-# Run on the box:   ACCEPT_ISAACSIM_EULA=yes bash ~/phi/sim/setup_sim_box.sh 2>&1 | tee ~/phi/logs/sim/setup.log
+# Run on the box:   ACCEPT_ISAACSIM_EULA=yes bash ~/phi/learning-to-fold/scripts/sim/setup_sim_box.sh 2>&1 | tee ~/phi/logs/sim/setup.log
+# Afterwards never `uv run` or `uv sync` inside lehome-challenge/: both re-sync the env to its lockfile and
+# undo step 5 (docs/plan.md, trap 23). Run the simulator with lehome-challenge/.venv/bin/python.
 set -euo pipefail
 unset CONDA_PREFIX CONDA_DEFAULT_ENV CONDA_SHLVL CONDA_EXE CONDA_PYTHON_EXE _CE_CONDA _CE_M VIRTUAL_ENV PYTHONPATH
 export PATH="$HOME/.local/bin:/usr/local/bin:/usr/bin:/bin"
@@ -21,6 +23,7 @@ if [ "${ACCEPT_ISAACSIM_EULA:-}" != "yes" ]; then
   echo "Nothing was installed."; exit 2
 fi
 test "$(git -C "$CH" rev-parse --short=7 HEAD)" = 5ea947e
+mkdir -p ~/phi/logs/sim
 df -h ~ /tmp | awk 'NR == 1 || /nvme/'
 nvidia-smi --query-gpu=name,driver_version,memory.used,memory.total --format=csv,noheader
 for u in https://pypi.nvidia.com/ https://download.pytorch.org/whl/cu128 https://pypi.org/simple/ https://github.com; do
@@ -32,7 +35,7 @@ mkdir -p ~/.local/bin
 [ -x ~/.local/bin/zenity ] || { printf '#!/bin/sh\nexit 0\n' > ~/.local/bin/zenity; chmod +x ~/.local/bin/zenity; }
 command -v zenity
 
-step "2/7 challenge venv: uv sync (isaacsim 5.1.0 from pypi.nvidia.com, torch 2.7.0 cu128)"
+step "2/7 challenge venv: uv sync from its lockfile (isaacsim 5.1.0 from pypi.nvidia.com, torch 2.7.0)"
 cd "$CH"
 time uv sync
 cp uv.lock ~/phi/lehome_challenge_uv.lock
@@ -62,11 +65,15 @@ step "6/7 versions"
 .venv/bin/python - <<'PY'
 import importlib.metadata as m, sys
 print("python", sys.version.split()[0])
-for p in ["isaacsim", "isaaclab", "lehome", "torch", "warp-lang", "flatdict", "numpy"]:
+for p in ["isaacsim", "isaaclab", "isaaclab-assets", "isaaclab-contrib", "isaaclab-mimic", "isaaclab-rl",
+          "isaaclab-tasks", "lehome", "torch", "warp-lang", "flatdict", "setuptools", "numpy"]:
     try:
-        print(f"{p:10s} {m.version(p)}")
+        print(f"{p:16s} {m.version(p)}")
     except Exception:
-        print(f"{p:10s} MISSING")
+        print(f"{p:16s} MISSING")
 PY
+
+uv pip freeze --python .venv/bin/python > ~/phi/logs/sim/sim_env_freeze.txt   # the env as it really is
+echo "full package list: ~/phi/logs/sim/sim_env_freeze.txt ($(wc -l < ~/phi/logs/sim/sim_env_freeze.txt) packages)"
 
 step "7/7 DONE"

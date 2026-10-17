@@ -3,7 +3,7 @@
 Run with the challenge's own env (on the GPU box, after gpu_guard.sh says GO):
     cd ~/phi/lehome_solution/lehome-challenge
     OMNI_KIT_ACCEPT_EULA=YES VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/nvidia_icd.json \
-        timeout 1800 .venv/bin/python ~/phi/sim/s1_headless_check.py
+        timeout 1800 .venv/bin/python ~/phi/learning-to-fold/scripts/sim/s1_headless_check.py
 
 Same settings as Ilia's eval worker (--headless --enable_cameras --device cpu). One line per
 stage with elapsed seconds; "S1 PASS" once the app has started, run and closed. The first start

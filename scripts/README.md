@@ -1,6 +1,6 @@
-# `scripts/lehome/` — running Ilia Larchenko's LeHome policy on our SO-101s
+# `scripts/`: the tools around Ilia Larchenko's LeHome policy
 
-Plan: [`experiments/2026-09-27_learning-to-fold-so101.md`](../../experiments/2026-09-27_learning-to-fold-so101.md).
+Plan: [docs/plan.md](../docs/plan.md) · simulator runbook: [docs/sim.md](../docs/sim.md)
 
 | file | what it does |
 |---|---|
@@ -16,12 +16,12 @@ Plan: [`experiments/2026-09-27_learning-to-fold-so101.md`](../../experiments/202
 
 ## Run the robot program
 
-**Once:** copy `configs/lehome/real_robot_mac.example.yaml` to `real_robot_mac.local.yaml` and fill in your ports and camera indices. The `phi` env needs `websockets` (`pip install websockets`). macOS will ask to grant **Input Monitoring** to your terminal (for the keys).
+**Once:** copy `configs/real_robot_mac.example.yaml` to `configs/real_robot_mac.local.yaml` (git-ignored) and fill in your ports and camera indices. Python: lerobot 0.6.0 (we use the `phi` env from the [phi repo](https://github.com/physical-hardware-intelligence/phi)), plus `websockets` (`pip install websockets`). macOS will ask to grant **Input Monitoring** to your terminal (for the keys).
 
-**Start the model server first** (GPU box, `scripts/serve.py` with the real-round flags; see the plan, B4). Then from the repo root:
+**Start the model server first** (GPU box: Ilia's `scripts/serve.py` with the real-round flags; see the plan, B4). Then from this repo's root:
 
 ```bash
-python scripts/lehome/record_real_dagger_mac.py --config configs/lehome/real_robot_mac.local.yaml \
+python scripts/record_real_dagger_mac.py --config configs/real_robot_mac.local.yaml \
   --robot_id phi_bi_follower --leader_id phi_bi_leader \
   --server ws://<gpu-box>:8000 --garment pant_short --dry_run
 ```
@@ -34,7 +34,7 @@ python scripts/lehome/record_real_dagger_mac.py --config configs/lehome/real_rob
 
 ⚠️ **In autonomous mode the leader arms are powered and copy the followers** (so a takeover starts from the same pose). Keep hands clear of the leaders until you take over.
 
-## Status (2026-10-03)
+## Robot program status (2026-10-03)
 
 - ✅ Runs on the Mac (lerobot 0.6.0); every import resolves.
 - ✅ Link to the real model, tested with demo frames: correct 5×12 moves back; garment auto-detect right for all 4 garments; a missing joint stops it with an error.

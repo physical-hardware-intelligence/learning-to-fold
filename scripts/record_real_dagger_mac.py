@@ -13,9 +13,9 @@
 #  10. lerobot 0.6.0 dataset API: no create_episode_buffer; save_episode() directly; streaming encoding
 """Record a real-robot dataset — DAgger (manual+autonomous) or manual-only.
 
-[phi-mac] On our Mac (phi env, lerobot 0.6.0), from the phi repo root:
+[phi-mac] On our Mac (phi env, lerobot 0.6.0), from this repo's root:
 
-    python scripts/lehome/record_real_dagger_mac.py --config configs/lehome/real_robot_mac.yaml \
+    python scripts/record_real_dagger_mac.py --config configs/real_robot_mac.local.yaml \
         --robot_id phi_bi_follower --leader_id phi_bi_leader \
         --server ws://<gpu-box>:8000 --garment pant_short --dry_run
 
