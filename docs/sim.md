@@ -119,12 +119,12 @@ OMNI_KIT_ACCEPT_EULA=YES VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/nvidia_icd.jso
 # 1. is the GPU free? GO = at least 12 GiB free and nobody else computing on it
 bash ~/phi/learning-to-fold/scripts/sim/gpu_guard.sh 12
 
-# 2. first ONE episode, to time it (run inside tmux)
-bash ~/phi/learning-to-fold/scripts/sim/run_sim_eval.sh one --num_workers 1 --garment_types top_long --randomize_garments --num_garments 1 --num_episodes 1 --metrics_only --no_wandb
+# 2. first ONE episode, to time it (run inside tmux). --rl_seed 0 makes the garment choice repeatable
+bash ~/phi/learning-to-fold/scripts/sim/run_sim_eval.sh one --num_workers 1 --garment_types top_long --randomize_garments --num_garments 1 --rl_seed 0 --num_episodes 1 --metrics_only --no_wandb
 #   the first word ("one") names the run folder; everything after goes to Ilia's run_eval.py
 
-# 3. then the S2 smoke: 2 episodes of every garment (size it from step 2's time per episode)
-bash ~/phi/learning-to-fold/scripts/sim/run_sim_eval.sh smoke --num_workers 1 --num_episodes 2 --all --metrics_only --no_wandb
+# 3. then the S2 smoke: 2 episodes on each of the 8 unseen garments = 16 episodes, ~1.5 h (default subset = unseen)
+bash ~/phi/learning-to-fold/scripts/sim/run_sim_eval.sh smoke --num_workers 1 --num_episodes 2 --metrics_only --no_wandb
 
 # 4. watch it from another terminal
 tail -f ~/phi/logs/sim/*-smoke/eval.log
@@ -132,6 +132,8 @@ tail -f ~/phi/logs/sim/*-smoke/eval.log
 # 5. done or stopped (Ctrl-C): confirm nothing of ours is left on the GPU
 nvidia-smi
 ```
+
+**How long a run takes** (measured 2026-10-17): about 3.5 min to start (model server 24 s, Isaac Sim 14 s, garment 80 s, simulation set-up 69 s, first two model calls ~50 s while it compiles), then 0.4 to 0.6 s per step. A fold that succeeds ends early (329 steps took 190 s); a failed episode runs all 600 steps, about 6 min. GPU peak with the model and one simulator: 12.0 GB of 16.
 
 **`run_eval.py` options that matter:**
 
@@ -180,10 +182,14 @@ nvidia-smi
 | 09:07 → 09:17 | laptop download + hash check | ✅ checkpoint 28/28, assets 447/447 |
 | 09:17 | box preflight | GPU **GO** (14 MiB used) · `pypi.nvidia.com`, PyTorch cu128, PyPI, GitHub all reachable · `/home` 813 G free · `/` 21 G free |
 | 09:18:44 → 09:22:24 | **install**, 3 min 40 s | ✅ `uv sync` 2 min 32 s (227 packages from the lockfile) · step 5's expected `flatdict` error, then fixed · Python 3.11.16 · Isaac Sim 5.1.0.0 · IsaacLab 0.53.1 (all 6 packages) · lehome 0.1.0 · torch 2.7.0+cu126 · warp-lang 1.12.1 · flatdict 4.0.1 · numpy 1.26.0 |
-| 09:18:53 → | copy laptop → box | ~2.7 MB/s over a relayed connection |
+| 09:18:53 → 10:26:47 | copy laptop → box | 1 h 08 min for 11.5 GB (~2.8 MB/s, relayed connection) |
 | 09:28:22 | GPU check | **GO**: 14 MiB used, no other jobs |
 | 09:28:42 → 09:29:42 | **S1 check** | ✅ **PASS**: started in 55.6 s · torch sees the RTX 4080 SUPER · lehome task registers · GPU peak 490 MiB · nothing left after |
 | 09:33 | env recorded | `uv pip freeze`: 293 packages |
+| 10:27:21 | hash check on the box | ✅ checkpoint 28/28, assets 447/447 (10 s) |
+| 10:27 | garments in the assets | 4 types × 12: per type 2 unseen + 10 seen, so 8 unseen and 48 in all |
+| 10:27:45 | GPU check | **GO**: 14 MiB used, no other jobs |
+| 10:27:57 → 10:35:22 | **one episode** (`one`: `Top_Long_Unseen_1`, seed 1627694679 from `--rl_seed 0`) | ✅ **folded: Success=True in 329 steps** (16.5 s simulated) · run 7 min 25 s, of which the episode 190 s · cameras 640×480 rendering · garment type detected right (top_long) · GPU peak 12.0 GB, 100% at times · clean shutdown, nothing left on the GPU |
 
 **Facts that shaped this:**
 - ⚠️ `run_eval.py` **accepts the Isaac Sim license on every start** (`OMNI_KIT_ACCEPT_EULA=YES`). We accepted it explicitly on 2026-10-17, before anything ran.
