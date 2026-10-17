@@ -204,6 +204,7 @@ nvidia-smi
 | 10:27:57 → 10:35:22 | **one episode** (`one`: `Top_Long_Unseen_1`, seed 1627694679 from `--rl_seed 0`) | ✅ **folded: Success=True in 329 steps** (3.7 s of simulated physics) · run 7 min 25 s, of which the episode 190 s · cameras 640×480 rendering · garment type detected right (top_long) · GPU peak 11,993 MiB, utilisation 100% at times · clean shutdown, nothing left on the GPU |
 | 13:22:34 | GPU check | **GO**: 14 MiB used, no other jobs (a second user was logged in, not using the GPU) |
 | 13:22:34 → 14:09:24 | **S2 smoke** (`smoke`: 2 × the 8 unseen garments, seeds fixed; `gpu_yield.sh` beside it) | ✅ **S2 passed**: 16 of 16 episodes ran, no crash. **13 of 16 folded**: long pants 3/4, short pants 3/4, long tops 4/4, short tops 3/4. 46.8 min in all. GPU peak 12,127 MiB. One episode ended by the stuck detector. The watcher never had to act. Nothing left on the GPU |
+| 14:41:25 → 15:24:35 | **repeat** of the same 16 episodes and seeds, saving debug videos and per-frame data (368 MB) | ✅ **16 of 16 folded** (the smoke test folded 13). 6 episodes identical, 3 failures became folds, 7 changed length. Same checkpoint, code and seeds, so the simulator is not repeatable run to run: report success rates with enough episodes and an interval. Both runs together: 29 of 32 (90% interval 79% to 96%). GPU peak 12,204 MiB |
 
 **Facts that shaped this:**
 - ⚠️ `run_eval.py` **accepts the Isaac Sim license on every start** (`OMNI_KIT_ACCEPT_EULA=YES`). We accepted it explicitly on 2026-10-17, before anything ran.
