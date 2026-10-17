@@ -12,13 +12,16 @@ Plan: [docs/plan.md](../docs/plan.md) · simulator runbook: [docs/sim.md](../doc
 | `sim/gpu_guard.sh` | Go/no-go before any GPU work on the shared box |
 | `sim/s1_headless_check.py` | Gate S1: starts Isaac Sim the way the eval worker does (headless, cameras on) and reports each stage's time |
 | `sim/run_sim_eval.sh` | One simulation evaluation, fully recorded (versions, GPU every 5 s, log) |
+| `server/b1_build.sh` | Builds the policy-server env on the GPU box (Ilia's code at `ca73828`, Python 3.11, JAX) |
+| `server/b3_download.sh` | Downloads the real-round checkpoint and dataset at pinned revisions, where Hugging Face is reachable |
+| `server/b4_serve.sh` | Starts Ilia's policy server with the real-round flags, after a GPU check |
 | `LICENSE.lehome_solution` | Ilia's Apache-2.0 license, covering the two files taken from his repo |
 
 ## Run the robot program
 
 **Once:** copy `configs/real_robot_mac.example.yaml` to `configs/real_robot_mac.local.yaml` (git-ignored) and fill in your ports and camera indices. Python: lerobot 0.6.0 (we use the `phi` env from the [phi repo](https://github.com/physical-hardware-intelligence/phi)), plus `websockets` (`pip install websockets`). macOS will ask to grant **Input Monitoring** to your terminal (for the keys).
 
-**Start the model server first** (GPU box: Ilia's `scripts/serve.py` with the real-round flags; see the plan, B4). Then from this repo's root:
+**Start the model server first** (GPU box: `server/b4_serve.sh`, inside tmux; see the plan, B4). Then from this repo's root:
 
 ```bash
 python scripts/record_real_dagger_mac.py --config configs/real_robot_mac.local.yaml \

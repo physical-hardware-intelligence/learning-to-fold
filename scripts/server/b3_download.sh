@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Track B · B3 — download the real-round checkpoint + the organizer's real dataset (plan §7).
 # Revisions pinned to the Hub commits recorded 2026-09-28. Log: ~/phi/logs/b3_download.log
+# Our GPU box can't reach Hugging Face (plan, trap 17): there, download on a laptop and copy (plan, B3).
+# This script is for a machine that can reach it.
 set -euo pipefail
 unset CONDA_PREFIX CONDA_DEFAULT_ENV CONDA_SHLVL CONDA_EXE CONDA_PYTHON_EXE _CE_CONDA _CE_M VIRTUAL_ENV PYTHONPATH
 export PATH="$HOME/.local/bin:/usr/local/bin:/usr/bin:/bin"

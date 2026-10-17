@@ -25,7 +25,7 @@ The plan, with every gate, known trap and log entry: [docs/plan.md](docs/plan.md
 ```
 docs/plan.md      the plan: tracks, gates, traps, results, log
 docs/sim.md       simulator runbook, every command explained
-scripts/          download checks, the replay test, the Mac robot program, simulator scripts
+scripts/          model-server and simulator scripts, download checks, the replay test, the Mac robot program
 configs/          rig config template for the robot program
 ```
 

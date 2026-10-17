@@ -2,9 +2,12 @@
 # Track B · B4 — Ilia's policy server with the real-round flags (plan §7, README).
 # Listens on ws://0.0.0.0:8000 (hard-coded upstream, serve.py:423). Stop it when the tests end.
 # Log: ~/phi/logs/b4_server.log
+# Run on the box, inside tmux:   bash ~/phi/learning-to-fold/scripts/server/b4_serve.sh 2>&1 | tee ~/phi/logs/b4_server.log
 set -euo pipefail
+here=$(cd "$(dirname "$0")" && pwd)
 unset CONDA_PREFIX CONDA_DEFAULT_ENV CONDA_SHLVL CONDA_EXE CONDA_PYTHON_EXE _CE_CONDA _CE_M VIRTUAL_ENV PYTHONPATH
 export PATH="$HOME/.local/bin:/usr/local/bin:/usr/bin:/bin"
+bash "$here/../sim/gpu_guard.sh" 7      # the server takes ~6 GB; NO-GO stops here
 cd ~/phi/lehome_solution
 echo "=== [$(date '+%H:%M:%S')] GPU before start: $(nvidia-smi --query-gpu=memory.used,memory.total,utilization.gpu --format=csv,noheader)"
 exec uv run python scripts/serve.py \

@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Track B · B1 — build the Learning to Fold policy-server env (plan §7).
 # Userspace only: no sudo, no conda. Log: ~/phi/logs/b1_build.log
+# Run on the box:   bash ~/phi/learning-to-fold/scripts/server/b1_build.sh 2>&1 | tee ~/phi/logs/b1_build.log
 set -euo pipefail
 
 # Clean environment: no conda, no inherited venv (plan trap 16).
