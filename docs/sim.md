@@ -16,6 +16,14 @@ run_eval.py ──starts──► serve.py :8000 (the model, on the GPU)
      └──starts──► worker ──► Isaac Sim (scene, 2 arms, garment, 3 cameras; renders on the GPU, physics on the CPU)
 ```
 
+**One step, in order** (read from the code on 2026-10-17; this is evaluation, so the network's weights are frozen and nothing learns):
+1. The simulator sends its observation to the eval worker (`POST /infer`, challenge `scripts/utils/remote_loop.py`).
+2. The worker returns the next action from its cached chunk. When the chunk's executed part is used up, it first sends this observation to the model server for a new chunk: 5 actions per chunk for tops, 3 for pants, and 5 for every type in an episode's first 5 calls (Ilia's `scripts/eval_worker.py`).
+3. The action, 12 joint targets in radians (each arm: 5 joints + gripper), becomes the arms' position targets (`garment_bi_v2.py:281-282`).
+4. PhysX advances the scene by 1/90 s. Each joint's drive (stiffness 17.8, damping 0.60, `lerobot.py`) pulls toward its target, so a target need not be reached within one step; cloth, gravity and contacts move too.
+5. Render, update the sensors, then read the observation (`direct_rl_env.py`, `step`): joint angles after the physics step, the top camera every step, the wrist cameras every third step (`update_period = 1/30 s`).
+6. The fold check runs every 30th step (`LEHOME_CHECK_INTERVAL`), so a successful episode stops at step 29, 59, 89, …
+
 - **Why this GPU:** Isaac Sim 5.1's minimum GPU is the **RTX 4080**; our box has a 4080 SUPER (16 GB). Data-centre cards without RT cores (A100, H100, H200) can't run it.
 - **Why one worker:** each simulator needs GPU memory too. Ilia ran 4 on a 96 GB card; we have 16 GB `[estimate]`.
 
@@ -194,10 +202,12 @@ nvidia-smi
 | 10:27 | garments in the assets | 4 types × 12: per type 2 unseen + 10 seen, so 8 unseen and 48 in all |
 | 10:27:45 | GPU check | **GO**: 14 MiB used, no other jobs |
 | 10:27:57 → 10:35:22 | **one episode** (`one`: `Top_Long_Unseen_1`, seed 1627694679 from `--rl_seed 0`) | ✅ **folded: Success=True in 329 steps** (3.7 s of simulated physics) · run 7 min 25 s, of which the episode 190 s · cameras 640×480 rendering · garment type detected right (top_long) · GPU peak 12.0 GB, 100% at times · clean shutdown, nothing left on the GPU |
+| 13:22:34 | GPU check | **GO**: 14 MiB used, no other jobs (a second user was logged in, not using the GPU) |
+| 13:22:34 → 14:09:24 | **S2 smoke** (`smoke`: 2 × the 8 unseen garments, seeds fixed; `gpu_yield.sh` beside it) | ✅ **S2 passed**: 16 of 16 episodes ran, no crash. **13 of 16 folded**: long pants 3/4, short pants 3/4, long tops 4/4, short tops 3/4. 46.8 min in all. GPU peak 12.1 GB. One episode ended by the stuck detector. The watcher never had to act. Nothing left on the GPU |
 
 **Facts that shaped this:**
 - ⚠️ `run_eval.py` **accepts the Isaac Sim license on every start** (`OMNI_KIT_ACCEPT_EULA=YES`). We accepted it explicitly on 2026-10-17, before anything ran.
 - Our box **can** reach NVIDIA's and PyTorch's package sites but not Hugging Face, so only the checkpoint and assets go through the laptop.
 - The box's `Assets/` held only the repo's tracked `.gitignore`, so the copy overwrites nothing.
 - torch is **+cu126, not cu128**: the challenge's `pyproject.toml` lists a cu128 index, but its lockfile takes torch from PyPI. The box's driver (580) runs either.
-- The eval worker runs the simulator as `lehome-challenge/.venv/bin/python -m scripts.eval --headless --enable_cameras --device cpu`: **cloth physics on the CPU**, rendering on the GPU.
+- The eval worker runs the simulator as `lehome-challenge/.venv/bin/python -m scripts.eval --headless --enable_cameras --device cpu`. Where PhysX then computes the cloth, CPU or GPU, is not verified yet.

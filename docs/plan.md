@@ -528,7 +528,7 @@ baseline   "hold": repeat state[t] five times — a predictor that does nothing
 | gate | passes when | by |
 |---|---|---|
 | **S1** | Isaac Sim + lehome installed without sudo; the simulator starts headless | ✅ **passed 2026-10-17** (kill date was Oct 24) |
-| **S2** | 2 episodes on each of the 8 unseen garments (16) complete, no crash; GPU peak + time per episode recorded | Oct 27 |
+| **S2** | 2 episodes on each of the 8 unseen garments (16) complete, no crash; GPU peak + time per episode recorded | ✅ **passed 2026-10-17** |
 | **S3** | his success rate on his evaluation setting. **The pass rule is written here before the run** | Nov 7 `[estimate]` |
 
 **Scripts** (`scripts/sim/`): `setup_sim_box.sh` (replaces setup.sh step 5: no hidden errors, IsaacLab fork pinned to `69f6fa5`, NVIDIA's license accepted only by explicit opt-in) · `gpu_guard.sh` (go/no-go on a shared GPU) · `s1_headless_check.py` (S1: starts Isaac Sim the way the eval worker does) · `run_sim_eval.sh` (one recorded run: versions, GPU trace every 5 s, log).
@@ -692,6 +692,7 @@ _Filled in as each gate lands._
 - **2026-10-17** Moved out of the phi repo into its own repo, `learning-to-fold`, with its history (phi PR #8, closed unmerged). Paths: plan → `docs/plan.md`, `scripts/lehome/` → `scripts/`, `configs/lehome/` → `configs/`; links into phi now point at phi's `main`.
 - **2026-10-17** Checkpoint + assets copied to the box and re-verified by hash (28/28, 447/447). The assets hold 4 garment types × 12 garments (2 unseen + 10 seen each). **First sim episode: `lehome_sim` folds `Top_Long_Unseen_1` in 329 steps** (Success=True). Run 7 min 25 s: ~3.5 min of start-up, then 190 s for the episode. GPU peak 12.0 GB of 16 with the model and one simulator. One episode says nothing about his ~80%; S3 measures that.
 - **2026-10-17** S2 resized before it ran: "every garment" would be 48 × 2 = 96 episodes (~8 h), not a smoke test. S2 now uses the 8 unseen garments, the challenge's default evaluation set: 16 episodes, ~1.5 h. S2 has no performance rule, so no result changes.
+- **2026-10-17** **S2 passed**: all 16 episodes ran, no crash, 46.8 min, GPU peak 12.1 GB. **13 of 16 folded** (Wilson 90% CI 61% to 92%). That is too few episodes to compare with his 79.63%, and only the 8 public unseen garments: his leaderboard used 20 garments per type, 8 of them private [paper §8.1]. His per-type inference settings load exactly as in paper Table 4 for all four types. Found in the code: the fold check runs every 30 steps, so a successful episode's length is 29 mod 30; one step = one action = 1/90 s of physics (step order in `docs/sim.md` §1).
 
 ## References
 
