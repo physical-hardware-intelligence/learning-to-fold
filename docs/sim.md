@@ -13,7 +13,7 @@ Running Ilia's simulation checkpoint in the LeHome Challenge simulator on our GP
 ```
 run_eval.py ──starts──► serve.py :8000 (the model, on the GPU)
      │                        ▲  camera images + joints → next moves
-     └──starts──► worker ──► Isaac Sim (scene, 2 arms, garment, 3 cameras; renders on the GPU, physics on the CPU)
+     └──starts──► worker ──► Isaac Sim (scene, 2 arms, garment, 3 cameras; rendering on the GPU)
 ```
 
 **One step, in order** (read from the code on 2026-10-17; this is evaluation, so the network's weights are frozen and nothing learns):
@@ -109,7 +109,7 @@ cd ~/phi/lehome_solution/lehome-challenge
 # 1. GPU check first, as its own step
 bash ~/phi/learning-to-fold/scripts/sim/gpu_guard.sh 12
 
-# 2. start Isaac Sim the way the eval worker does: headless, cameras on, physics on the CPU
+# 2. start Isaac Sim the way the eval worker does: headless, cameras on, --device cpu
 cd ~/phi/lehome_solution/lehome-challenge
 OMNI_KIT_ACCEPT_EULA=YES VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/nvidia_icd.json \
   timeout 1800 .venv/bin/python ~/phi/learning-to-fold/scripts/sim/s1_headless_check.py
