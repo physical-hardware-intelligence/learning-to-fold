@@ -11,6 +11,7 @@ Plan: [docs/plan.md](../docs/plan.md) · simulator runbook: [docs/sim.md](../doc
 | `sim/setup_sim_box.sh` | Installs the simulator on the GPU box (Isaac Sim 5.1, IsaacLab fork, lehome). No sudo, stops on any error, accepts NVIDIA's license only with `ACCEPT_ISAACSIM_EULA=yes` |
 | `sim/gpu_guard.sh` | Go/no-go before any GPU work on the shared box |
 | `sim/s1_headless_check.py` | Gate S1: starts Isaac Sim the way the eval worker does (headless, cameras on) and reports each stage's time |
+| `sim/gpu_yield.sh` | Runs beside an evaluation on a shared GPU: if another user starts a GPU job, it stops ours and logs why |
 | `sim/run_sim_eval.sh` | One simulation evaluation, fully recorded (versions, GPU every 5 s, log) |
 | `server/b1_build.sh` | Builds the policy-server env on the GPU box (Ilia's code at `ca73828`, Python 3.11, JAX) |
 | `server/b3_download.sh` | Downloads the real-round checkpoint and dataset at pinned revisions, where Hugging Face is reachable |

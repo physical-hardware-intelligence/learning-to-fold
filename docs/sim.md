@@ -126,10 +126,13 @@ bash ~/phi/learning-to-fold/scripts/sim/run_sim_eval.sh one --num_workers 1 --ga
 # 3. then the S2 smoke: 2 episodes on each of the 8 unseen garments = 16 episodes, ~1.5 h (default subset = unseen)
 bash ~/phi/learning-to-fold/scripts/sim/run_sim_eval.sh smoke --num_workers 1 --num_episodes 2 --metrics_only --no_wandb
 
-# 4. watch it from another terminal
+# 4. on a shared box, in a second tmux window: step aside automatically if someone else starts a GPU job
+bash ~/phi/learning-to-fold/scripts/sim/gpu_yield.sh $(ls -td ~/phi/logs/sim/*-smoke | head -1)
+
+# 5. watch it from another terminal
 tail -f ~/phi/logs/sim/*-smoke/eval.log
 
-# 5. done or stopped (Ctrl-C): confirm nothing of ours is left on the GPU
+# 6. done or stopped (Ctrl-C): confirm nothing of ours is left on the GPU
 nvidia-smi
 ```
 
@@ -157,6 +160,7 @@ nvidia-smi
 ## 6. GPU rules (shared box)
 
 - **Check, decide, launch, as separate steps.** `run_sim_eval.sh` runs the guard first and stops on NO-GO.
+- **Step aside for others.** `gpu_yield.sh` stops our run if another user starts a GPU job during it.
 - **One of our GPU jobs at a time:** this, *or* the robot model server, *or* another experiment. Never two on 16 GB.
 - **Long runs only in overnight slots** agreed with the box's owner.
 - **Big files stay in your home folder.** On our box `/` holds `/tmp` and had only 21 G free on 2026-10-17.
