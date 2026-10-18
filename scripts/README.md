@@ -6,6 +6,7 @@ Plan: [docs/plan.md](../docs/plan.md) · simulator runbook: [docs/sim.md](../doc
 |---|---|
 | `record_real_dagger_mac.py` | **The robot program, on the Mac.** Ilia's runner, adapted (each change marked `[phi-mac]`). Reads both arms + 3 cameras, asks the model server for the next 5 moves, moves the arms, records episodes. You can take over with the leader arms (DAgger) |
 | `real_robot_config.py` | Ilia's helper, vendored unchanged |
+| `client_resize.py` | Shrinks camera frames on the Mac exactly as the server's own resize would (`--client_resize`): 6.14 → 0.41 MB per request |
 | `replay_gate.py` | Tests the model server without a robot: replay test (B6), latency (B5), a stand-in server |
 | `verify_hub_download.py` | Proves a Hugging Face download is complete: every file's size and hash |
 | `sim/setup_sim_box.sh` | Installs the simulator on the GPU box (Isaac Sim 5.1, IsaacLab fork, lehome). No sudo, stops on any error, accepts NVIDIA's license only with `ACCEPT_ISAACSIM_EULA=yes` |
@@ -27,20 +28,21 @@ Plan: [docs/plan.md](../docs/plan.md) · simulator runbook: [docs/sim.md](../doc
 ```bash
 python scripts/record_real_dagger_mac.py --config configs/real_robot_mac.local.yaml \
   --robot_id phi_bi_follower --leader_id phi_bi_leader \
-  --server ws://<gpu-box>:8000 --garment pant_short --dry_run
+  --server ws://<gpu-box>:8000 --garment pant_short --client_resize --dry_run
 ```
 
 - **`--dry_run` first, every new setup:** everything runs, nothing moves. Recordings go to `<datasets_root>/_dryrun`.
 - Drop `--dry_run` for real runs. Add `--max_relative_target 10` to cap each follower step (degrees) on early runs.
+- `--client_resize`: send frames already shrunk to the model's 224-pixel width. Same images the server would make, 15× less data. Recordings still keep full frames.
 - `--manual_only`: teleop recording, no server needed.
 
 **Keys** (any window): `Space` = robot ↔ you · `→` = save episode · `←` = discard · `Esc` = stop.
 
 ⚠️ **In autonomous mode the leader arms are powered and copy the followers** (so a takeover starts from the same pose). Keep hands clear of the leaders until you take over.
 
-## Robot program status (2026-10-03)
+## Robot program status (2026-10-18)
 
 - ✅ Runs on the Mac (lerobot 0.6.0); every import resolves.
 - ✅ Link to the real model, tested with demo frames: correct 5×12 moves back; garment auto-detect right for all 4 garments; a missing joint stops it with an error.
 - ⏳ Not yet run with the arms and cameras: that needs the rig.
-- ⚠️ Speed from the Mac: **2.46 s per answer through the Tailscale relay** (6 MB of images per request). Sending 224×224 images is the next fix (plan §6).
+- ✅ Speed from the Mac: **0.30 s per answer with `--client_resize`**, through the Tailscale relay (median of 2,400 requests; 2.40 s with full frames). The replay test passes the same way with shrunk frames (plan Log, 2026-10-18).

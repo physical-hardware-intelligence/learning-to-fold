@@ -48,6 +48,8 @@ import time
 
 import numpy as np
 
+from client_resize import shrink   # --client-resize: frames shrunk as the server's resize_with_pad would
+
 # --- Copied from lehome_solution @ ca73828; each line cites its source. -----------------------
 GARMENT_TYPES = ("top_long", "top_short", "pant_long", "pant_short")  # constants.py:9, id = index
 MOTOR_NAMES = (                                                        # real_robot_config.py:30
@@ -197,14 +199,14 @@ def _images_for(cond: str, s: dict, by_slot: dict) -> dict[str, np.ndarray]:
     return im
 
 
-def build_request(cond: str, s: dict, by_slot: dict) -> dict:
+def build_request(cond: str, s: dict, by_slot: dict, client_resize: bool = False) -> dict:
     state = s["state"].copy()
     if cond == "C4_state_x0.9":
         state[ARM] *= 0.9
     im = _images_for(cond, s, by_slot)
     msg = {"type": "infer_chunk", "session_id": "replay_gate", "observation.state": state.tolist()}
     for cam, wire_key in WIRE.items():
-        msg[wire_key] = _b64(im[cam])
+        msg[wire_key] = _b64(shrink(im[cam]) if client_resize else im[cam])   # client_resize.py
     msg["inference_config"] = dict(INFERENCE_CONFIG)
     msg["garment_type_id"] = int(s["garment_type_id"])
     return msg
@@ -279,6 +281,8 @@ def cmd_dry_run(a) -> int:
     hold = np.stack([_err(_hold(s), s) for s in samples])
     print(f"\n{len(samples)} samples · request size {sizes['policy'] / 1e6:.2f} MB "
           f"(all conditions: {sorted(set(round(v / 1e6, 2) for v in sizes.values()))} MB)")
+    small = len(json.dumps(build_request("policy", samples[0], by_slot, True)))
+    print(f"with --client-resize: {small / 1e6:.2f} MB per request ({sizes['policy'] / small:.1f}x smaller)")
     print(f"hold baseline, mean |state[t] - action[t..t+4]|: {hold.mean():.3f}")
     for g in GARMENT_TYPES:
         m = np.stack([_err(_hold(s), s) for s in samples if s["garment"] == g])
@@ -300,7 +304,7 @@ def cmd_run(a) -> int:
         for p in range(a.passes):
             for c in CONDITIONS:
                 for i, s in enumerate(samples):
-                    pred, dt = _infer(ws, build_request(c, s, by_slot))
+                    pred, dt = _infer(ws, build_request(c, s, by_slot, a.client_resize))
                     preds[c][p, i], errs[c][p, i] = pred, _err(pred, s)
                     t_req.append(dt)
                     done += 1
@@ -403,13 +407,13 @@ def cmd_report(a) -> int:
 
 def cmd_latency(a) -> int:
     samples = load_samples(a.data, 1, 1)
-    msg = build_request("policy", samples[0], _index(samples))
+    msg = build_request("policy", samples[0], _index(samples), a.client_resize)
     with _connect(a.server, _comp(a)) as ws:
         for _ in range(a.warmup):
             _infer(ws, msg)
         t = [_infer(ws, msg)[1] for _ in range(a.n)]
     t_ms = np.asarray(t) * 1e3
-    print(f"[compression {a.compression}] t_req over {a.n} calls after {a.warmup} warm-up: median {np.median(t_ms):.1f} ms, "
+    print(f"[compression {a.compression}, client_resize {a.client_resize}] t_req over {a.n} calls after {a.warmup} warm-up: median {np.median(t_ms):.1f} ms, "
           f"p95 {np.percentile(t_ms, 95):.1f} ms, min {t_ms.min():.1f}, max {t_ms.max():.1f}; "
           f"request {len(json.dumps(msg)) / 1e6:.2f} MB")
     return 0
@@ -470,12 +474,14 @@ def main() -> int:
     p.add_argument("--rule", choices=["v1", "v2"], default="v2",
                    help="v1: controls > 1.5x (run 1). v2: pre-registered 2026-09-28 19:40 PDT (see the plan's B6)")
     p.add_argument("--out", default="outputs/replay_gate")
+    p.add_argument("--client-resize", action="store_true", help="send frames shrunk as the server would (client_resize.py)")
     p = sub.add_parser("latency", help="B5 · M1: t_req on one fixed request")
     p.add_argument("--data", required=True)
     p.add_argument("--server", default="ws://localhost:8000")
     p.add_argument("--warmup", type=int, default=5)
     p.add_argument("--compression", choices=["none", "deflate"], default="none")
     p.add_argument("--n", type=int, default=50)
+    p.add_argument("--client-resize", action="store_true", help="send frames shrunk as the server would (client_resize.py)")
     p = sub.add_parser("mock-server", help="protocol stand-in that holds still")
     p.add_argument("--port", type=int, default=8765)
     p = sub.add_parser("report", help="post-hoc: per garment, paired controls, bootstrap CIs")

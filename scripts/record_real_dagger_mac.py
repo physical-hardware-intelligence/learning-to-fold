@@ -11,6 +11,7 @@
 #   8. refuse to send an observation with a missing joint (upstream sends 0.0 silently)
 #   9. --dry_run: everything runs, nothing moves (followers limp, leaders never torqued)
 #  10. lerobot 0.6.0 dataset API: no create_episode_buffer; save_episode() directly; streaming encoding
+#  11. --client_resize: send frames shrunk here exactly as the server's resize_with_pad would (client_resize.py)
 """Record a real-robot dataset — DAgger (manual+autonomous) or manual-only.
 
 [phi-mac] On our Mac (phi env, lerobot 0.6.0), from this repo's root:
@@ -78,6 +79,7 @@ from lerobot.datasets.pipeline_features import (
     create_initial_features,
 )
 from lerobot.utils.feature_utils import build_dataset_frame, combine_feature_dicts  # [phi-mac] moved in 0.6.0
+from client_resize import shrink  # [phi-mac] --client_resize
 from lerobot.datasets.video_utils import VideoEncodingManager
 from lerobot.processor import make_default_processors
 from lerobot.robots import make_robot_from_config
@@ -316,13 +318,16 @@ def _b64_image(img: np.ndarray) -> dict:
 
 
 class PolicyClient:
-    def __init__(self, server_address: str, garment_type_id: int | None = None) -> None:
+    def __init__(self, server_address: str, garment_type_id: int | None = None,
+                 client_resize: bool = False) -> None:
         self._url = (
             server_address if server_address.startswith("ws")
             else f"ws://{server_address}"
         )
         # Optional fixed garment id 0..3; None = latch from the first chunk.
         self._forced_garment_type_id = garment_type_id
+        # [phi-mac] shrink frames here as the server's resize_with_pad would (client_resize.py): 6.14 -> 0.41 MB
+        self._client_resize = client_resize
         self._garment_type_id = garment_type_id
         self._initial_actions: np.ndarray | None = None
         self._ws = None
@@ -341,6 +346,10 @@ class PolicyClient:
                 time.sleep(3)
         raise ConnectionError(f"Could not connect to policy server at {self._url}")
 
+    def _wire(self, img: np.ndarray) -> np.ndarray:
+        """The copy sent to the server; the dataset still records the full frame."""
+        return shrink(img) if self._client_resize else img
+
     def reset_session(self) -> None:
         """New episode / mode switch: drop the inpaint anchor and re-run the
         garment bootstrap (unless a fixed garment id was forced)."""
@@ -356,9 +365,9 @@ class PolicyClient:
             "type": "infer_chunk",
             "session_id": "real_dagger",
             "observation.state": state.tolist(),
-            "observation.images.top_rgb": _b64_image(obs_dict["right_front"]),
-            "observation.images.left_rgb": _b64_image(obs_dict["left_wrist"]),
-            "observation.images.right_rgb": _b64_image(obs_dict["right_wrist"]),
+            "observation.images.top_rgb": _b64_image(self._wire(obs_dict["right_front"])),
+            "observation.images.left_rgb": _b64_image(self._wire(obs_dict["left_wrist"])),
+            "observation.images.right_rgb": _b64_image(self._wire(obs_dict["right_wrist"])),
             "inference_config": dict(INFERENCE_CONFIG),
         }
         if self._garment_type_id is not None:
@@ -857,6 +866,8 @@ def main() -> int:
                     help="[phi-mac] leader calibration id (upstream hard-codes bimanual_leader)")
     ap.add_argument("--max_relative_target", type=float, default=None,
                     help="[phi-mac] cap each follower step (degrees; gripper in 0-100). Default: none")
+    ap.add_argument("--client_resize", action="store_true",
+                    help="[phi-mac] send 224-wide frames shrunk here exactly as the server would (client_resize.py)")
     ap.add_argument("--dry_run", action="store_true",
                     help="[phi-mac] everything runs, nothing moves. Saved under <datasets_root>/_dryrun")
     ap.add_argument("--camera_reset", action="store_true",
@@ -935,7 +946,8 @@ def main() -> int:
     policy_client = None
     if not args.manual_only:
         policy_client = PolicyClient(
-            args.server, garment_type_id=args.garment_type_id)
+            args.server, garment_type_id=args.garment_type_id,
+            client_resize=args.client_resize)  # [phi-mac]
 
     # Keyboard
     kb = KeyboardListener()
