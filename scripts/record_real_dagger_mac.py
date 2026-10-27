@@ -66,6 +66,7 @@ import time
 from pathlib import Path
 from queue import Empty, Queue
 
+import cv2  # [phi-mac] --top_crop
 import numpy as np
 import yaml
 
@@ -319,7 +320,8 @@ def _b64_image(img: np.ndarray) -> dict:
 
 class PolicyClient:
     def __init__(self, server_address: str, garment_type_id: int | None = None,
-                 client_resize: bool = False) -> None:
+                 client_resize: bool = False, top_crop: float = 1.0,
+                 call_log: Path | None = None) -> None:
         self._url = (
             server_address if server_address.startswith("ws")
             else f"ws://{server_address}"
@@ -328,6 +330,10 @@ class PolicyClient:
         self._forced_garment_type_id = garment_type_id
         # [phi-mac] shrink frames here as the server's resize_with_pad would (client_resize.py): 6.14 -> 0.41 MB
         self._client_resize = client_resize
+        # [phi-mac] keep the centre of a wider top lens, scaled to the organisers' 1280x720 (see --top_crop)
+        self._top_crop = top_crop
+        # [phi-mac] one JSON line per call: state, the chunk, the server's predictions (see --dry_run)
+        self._call_log = open(call_log, "a") if call_log else None
         self._garment_type_id = garment_type_id
         self._initial_actions: np.ndarray | None = None
         self._ws = None
@@ -345,6 +351,15 @@ class PolicyClient:
                 log.warning("Policy server connect %d/20: %s", attempt + 1, e)
                 time.sleep(3)
         raise ConnectionError(f"Could not connect to policy server at {self._url}")
+
+    def _top(self, img: np.ndarray) -> np.ndarray:
+        """[phi-mac] --top_crop: the centre fraction of the top frame, scaled to 1280x720 like the organisers' D435."""
+        if self._top_crop >= 1.0:
+            return img
+        h, w = img.shape[:2]
+        ch, cw = round(h * self._top_crop), round(w * self._top_crop)
+        y, x = (h - ch) // 2, (w - cw) // 2
+        return cv2.resize(img[y:y + ch, x:x + cw], (1280, 720), interpolation=cv2.INTER_AREA)
 
     def _wire(self, img: np.ndarray) -> np.ndarray:
         """The copy sent to the server; the dataset still records the full frame."""
@@ -365,9 +380,11 @@ class PolicyClient:
             "type": "infer_chunk",
             "session_id": "real_dagger",
             "observation.state": state.tolist(),
-            "observation.images.top_rgb": _b64_image(self._wire(obs_dict["right_front"])),
+            "observation.images.top_rgb": _b64_image(self._wire(self._top(obs_dict["right_front"]))),
             "observation.images.left_rgb": _b64_image(self._wire(obs_dict["left_wrist"])),
-            "observation.images.right_rgb": _b64_image(self._wire(obs_dict["right_wrist"])),
+            # [phi-mac] a camera not fitted yet is sent as black (dry runs only, see main)
+            "observation.images.right_rgb": _b64_image(self._wire(
+                obs_dict.get("right_wrist", np.zeros((480, 640, 3), np.uint8)))),
             "inference_config": dict(INFERENCE_CONFIG),
         }
         if self._garment_type_id is not None:
@@ -392,6 +409,13 @@ class PolicyClient:
             np.asarray(next_init, dtype=np.float32) if next_init is not None else None
         )
         chunk = np.asarray(resp["actions"], dtype=np.float32)
+        if self._call_log:  # [phi-mac]
+            self._call_log.write(json.dumps({
+                "t": time.time(), "state": state.tolist(), "actions": chunk.tolist(),
+                "garment_type_id": self._garment_type_id,
+                **{k: resp.get(k) for k in ("garment_type_pred", "success_pred", "completion_pred",
+                                            "checkpoint_pred", "ttc_pred") if k in resp}}, default=float) + "\n")
+            self._call_log.flush()
 
         # Garment-type bootstrap: latch the prediction from the first chunk
         # and hold position while the one-chunk delay flushes through. The
@@ -415,6 +439,8 @@ class PolicyClient:
         return [chunk[i] for i in range(chunk.shape[0])]
 
     def close(self) -> None:
+        if self._call_log:  # [phi-mac]
+            self._call_log.close()
         try:
             if self._ws:
                 self._ws.close()
@@ -427,6 +453,29 @@ class PolicyClient:
 # ---------------------------------------------------------------------------
 
 _DRY_RUN = False  # [phi-mac] set by --dry_run
+
+
+def _guard_configure(arm, never_torque: bool) -> None:
+    """[phi-mac] lerobot 0.6.0 SOFollower.configure() ends with torque ON (bus.torque_disabled() re-enables it on
+    exit) without writing a goal first, so a follower whose Goal_Position register is stale drives to it at once.
+    Measured 2026-10-27, motors off: right follower goals ~270 deg from present on 5 joints, left up to 116 deg.
+    Here goal = present while limp, before anything can turn torque on; with never_torque (dry runs) torque stays off."""
+    configure = arm.configure
+
+    def guarded() -> None:
+        arm.bus.disable_torque()
+        arm.bus.sync_write("Goal_Position", arm.bus.sync_read("Present_Position", normalize=False), normalize=False)
+        if not never_torque:
+            configure()
+            return
+        enable = arm.bus.enable_torque
+        arm.bus.enable_torque = lambda *a, **k: None
+        try:
+            configure()
+        finally:
+            arm.bus.enable_torque = enable
+
+    arm.configure = guarded
 
 
 def _enable_leader_torque(teleop, obs: dict) -> None:
@@ -868,6 +917,9 @@ def main() -> int:
                     help="[phi-mac] cap each follower step (degrees; gripper in 0-100). Default: none")
     ap.add_argument("--client_resize", action="store_true",
                     help="[phi-mac] send 224-wide frames shrunk here exactly as the server would (client_resize.py)")
+    ap.add_argument("--top_crop", type=float, default=1.0,
+                    help="[phi-mac] send the top camera's centre fraction scaled to 1280x720: 0.794 turns our EMEET C960 "
+                         "(set to 1920x1080) into the organisers' D435 view at 73.5 cm (matched on their frame, 2026-10-26)")
     ap.add_argument("--dry_run", action="store_true",
                     help="[phi-mac] everything runs, nothing moves. Saved under <datasets_root>/_dryrun")
     ap.add_argument("--camera_reset", action="store_true",
@@ -912,6 +964,15 @@ def main() -> int:
     # organizer dataset (data/lehome_real/four_types_merged), which was recorded
     # in degrees. Mixing motor-pct and degrees on wrist_roll halves its
     # apparent range — see lerobot issue #3176.
+    missing_cams = [k for k, v in yaml_cfg.get("cameras", {}).items() if (v or {}).get("index_or_path") is None]
+    if missing_cams:  # [phi-mac] e.g. a wrist camera whose mount is not printed yet
+        if not args.dry_run:
+            ap.error(f"cameras {missing_cams} have no index: fit them, or use --dry_run (sent to the model as black)")
+        import real_robot_config as _rrc
+        _rrc._CAMERA_ROUTING = {k: v for k, v in _rrc._CAMERA_ROUTING.items() if k not in missing_cams}
+        for k in missing_cams:
+            yaml_cfg["cameras"].pop(k)
+        log.warning("DRY RUN: cameras %s not fitted, sent to the model as black frames", missing_cams)
     robot_cfg = build_bi_so_follower_config(yaml_cfg, args.robot_id, use_degrees=True)
     if args.max_relative_target is not None:  # [phi-mac]
         robot_cfg.left_arm_config.max_relative_target = args.max_relative_target
@@ -925,6 +986,8 @@ def main() -> int:
     # Connect hardware
     log.info("Connecting follower arms + cameras...")
     robot = make_robot_from_config(robot_cfg)
+    for arm in (robot.left_arm, robot.right_arm):  # [phi-mac] no jump to a stale goal at connect
+        _guard_configure(arm, never_torque=args.dry_run)
     robot.connect()
     if args.dry_run:  # [phi-mac] arms stay limp; actions are logged and recorded, never sent
         global _DRY_RUN
@@ -947,7 +1010,8 @@ def main() -> int:
     if not args.manual_only:
         policy_client = PolicyClient(
             args.server, garment_type_id=args.garment_type_id,
-            client_resize=args.client_resize)  # [phi-mac]
+            client_resize=args.client_resize, top_crop=args.top_crop,  # [phi-mac]
+            call_log=session_dir / "calls.jsonl" if args.dry_run else None)
 
     # Keyboard
     kb = KeyboardListener()
