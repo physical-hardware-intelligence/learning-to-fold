@@ -22,6 +22,8 @@
 #  19. --max_episode_s (wall clock) saves the episode when it runs out
 #  20. --start_delay_s: countdown before each autonomous episode
 #  21. first Ctrl-C saves the episode then stops; a second stops at once
+#  22. --leaders_limp also ignores Space: the key listener is global, so a Space typed in any app handed control
+#      to the limp leaders and the followers would have jumped to the leaders' pose (seen in a dry run, 2026-10-30)
 # The full list of rig, camera and safety changes, with the reasons: docs/real-rig.md
 """Record a real-robot dataset — DAgger (manual+autonomous) or manual-only.
 
@@ -803,6 +805,9 @@ def _record_episodes(robot, teleop, dataset, policy_client, kb, args) -> None:
                 elif ev == "LEFT":
                     outcome = "discard"
                     break
+                elif ev == "SPACE" and not manual_only and _LEADERS_LIMP:  # [phi-mac] change 22
+                    _status(_YELLOW, "!!", "Space ignored: the leaders are limp, so there is no takeover")
+                    continue
                 elif ev == "SPACE" and not manual_only:
                     new_mode = "autonomous" if mode == "manual" else "manual"
                     if new_mode == "manual":
