@@ -526,7 +526,13 @@ def _ramp_to(robot, target_vec12: np.ndarray, ramp_time: float = 4.0, hz: int = 
     for step in range(1, n + 1):
         robot.send_action(vec12_to_action_dict((cur + (step / n) * (target - cur)).astype(np.float32)))
         time.sleep(1.0 / hz)
-    time.sleep(0.5)
+    # then hold the target until every joint is within 2 deg of it (a capped or loaded arm lags the ramp), up to 6 s
+    for _ in range(6 * hz):
+        robot.send_action(vec12_to_action_dict(target.astype(np.float32)))
+        time.sleep(1.0 / hz)
+        if np.abs(state_dict_to_vec12(robot.get_observation()) - target).max() <= 2.0:
+            break
+    time.sleep(0.3)
 
 
 def _ramp_to_safe_rest(robot, ramp_time: float = 4.0, hz: int = 30) -> None:
@@ -1054,7 +1060,7 @@ def main() -> int:
         policy_client = PolicyClient(
             args.server, garment_type_id=args.garment_type_id,
             client_resize=args.client_resize, top_crop=args.top_crop,  # [phi-mac]
-            call_log=session_dir / "calls.jsonl" if args.dry_run else None)
+            call_log=session_dir / "calls.jsonl")  # [phi-mac] every run: what the model saw and predicted
 
     # Keyboard
     kb = KeyboardListener()
