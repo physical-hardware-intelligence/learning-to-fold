@@ -731,6 +731,7 @@ def _record_episodes(robot, teleop, dataset, policy_client, kb, args) -> None:
                 policy_client.reset_session()
             action_queue: list[np.ndarray] = []
             frame_count = 0
+            episode_t0 = time.time()  # [phi-mac] --max_episode_s is wall-clock time
 
             obs = robot.get_observation()
             if manual_only:
@@ -745,7 +746,7 @@ def _record_episodes(robot, teleop, dataset, policy_client, kb, args) -> None:
                 t0 = time.perf_counter()
 
                 ev = kb.poll()
-                if args.max_episode_s and frame_count >= args.max_episode_s * args.fps:  # [phi-mac] first-run timer
+                if args.max_episode_s and frame_count and time.time() - episode_t0 >= args.max_episode_s:  # [phi-mac]
                     _status(_YELLOW, "!!", f"--max_episode_s {args.max_episode_s:.0f} reached: saving the episode")
                     ev = "RIGHT"  # saved like the right-arrow key (with --episodes 1 the session then ends)
                 if ev == "ESC":
@@ -949,7 +950,7 @@ def main() -> int:
                     help="[phi-mac] send the top camera's centre fraction scaled to 1280x720: 0.794 turns our EMEET C960 "
                          "(set to 1920x1080) into the organisers' D435 view at 73.5 cm (matched on their frame, 2026-10-26)")
     ap.add_argument("--max_episode_s", type=float, default=None,
-                    help="[phi-mac] save the episode after this many seconds of it (counted in frames at --fps); first powered runs")
+                    help="[phi-mac] save the episode after this many seconds (wall clock); first powered runs")
     ap.add_argument("--leaders_limp", action="store_true",
                     help="[phi-mac] never torque or move the leaders (no takeover); for first powered runs")
     ap.add_argument("--dry_run", action="store_true",
