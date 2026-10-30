@@ -741,6 +741,11 @@ def _record_episodes(robot, teleop, dataset, policy_client, kb, args) -> None:
             kb.drain()
 
             outcome = "continue"
+            if args.start_delay_s and not manual_only:  # [phi-mac] hands out of the workspace before the arms move
+                for k in range(int(args.start_delay_s), 0, -1):
+                    _status(_YELLOW, ">>", f"Arms start in {k} s: hands out of the workspace")
+                    time.sleep(1.0)
+            episode_t0 = time.time()  # [phi-mac] the timer starts when the arms do
 
             while outcome == "continue":
                 t0 = time.perf_counter()
@@ -951,6 +956,8 @@ def main() -> int:
                          "(set to 1920x1080) into the organisers' D435 view at 73.5 cm (matched on their frame, 2026-10-26)")
     ap.add_argument("--max_episode_s", type=float, default=None,
                     help="[phi-mac] save the episode after this many seconds (wall clock); first powered runs")
+    ap.add_argument("--start_delay_s", type=float, default=0.0,
+                    help="[phi-mac] countdown before each autonomous episode (arms hold still)")
     ap.add_argument("--leaders_limp", action="store_true",
                     help="[phi-mac] never torque or move the leaders (no takeover); for first powered runs")
     ap.add_argument("--dry_run", action="store_true",
