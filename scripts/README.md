@@ -1,11 +1,12 @@
 # `scripts/`: the tools around Ilia Larchenko's LeHome policy
 
-Plan: [docs/plan.md](../docs/plan.md) · simulator runbook: [docs/sim.md](../docs/sim.md)
+Plan: [docs/plan.md](../docs/plan.md) · simulator runbook: [docs/sim.md](../docs/sim.md) · real rig, every change we made: [docs/real-rig.md](../docs/real-rig.md)
 
 | file | what it does |
 |---|---|
 | `record_real_dagger_mac.py` | **The robot program, on the Mac.** Ilia's runner, adapted (each change marked `[phi-mac]`). Reads both arms + 3 cameras, asks the model server for the next 5 moves, moves the arms, records episodes. You can take over with the leader arms (DAgger) |
 | `real_robot_config.py` | Ilia's helper, vendored unchanged |
+| `stack_streams.py` | One real-speed video of a recorded episode: top camera with the crop box, what the model saw, both wrists |
 | `client_resize.py` | Shrinks camera frames on the Mac exactly as the server's own resize would (`--client_resize`): 6.14 → 0.41 MB per request |
 | `replay_gate.py` | Tests the model server without a robot: replay test (B6), latency (B5), a stand-in server |
 | `verify_hub_download.py` | Proves a Hugging Face download is complete: every file's size and hash |

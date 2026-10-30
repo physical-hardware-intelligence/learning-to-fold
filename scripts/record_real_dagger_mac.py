@@ -12,6 +12,17 @@
 #   9. --dry_run: everything runs, nothing moves (followers limp, leaders never torqued)
 #  10. lerobot 0.6.0 dataset API: no create_episode_buffer; save_episode() directly; streaming encoding
 #  11. --client_resize: send frames shrunk here exactly as the server's resize_with_pad would (client_resize.py)
+#  12. goal = present before connect turns torque on (_guard_configure): stale goals jerk the arm (2026-10-27)
+#  13. --top_crop: the top camera's centre fraction scaled to 1280x720, to frame like the organisers' camera
+#  14. --dry_run with a camera not fitted: sent to the model as black frames
+#  15. calls.jsonl on every run: state, chunk and the model's predictions
+#  16. cameras.<name>.rotation in the config (our wrist cameras sit 180 deg from the organisers')
+#  17. safe stop: every exit ramps back to the pose read at connect, then torque off (upstream drops the arms)
+#  18. --leaders_limp: never torque or move the leaders
+#  19. --max_episode_s (wall clock) saves the episode when it runs out
+#  20. --start_delay_s: countdown before each autonomous episode
+#  21. first Ctrl-C saves the episode then stops; a second stops at once
+# The full list of rig, camera and safety changes, with the reasons: docs/real-rig.md
 """Record a real-robot dataset — DAgger (manual+autonomous) or manual-only.
 
 [phi-mac] On our Mac (phi env, lerobot 0.6.0), from this repo's root:
