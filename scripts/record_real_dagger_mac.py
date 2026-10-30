@@ -60,6 +60,7 @@ import os
 import base64
 import json
 import select
+import signal
 import sys
 import threading
 import time
@@ -454,6 +455,16 @@ class PolicyClient:
 
 _DRY_RUN = False  # [phi-mac] set by --dry_run
 _LEADERS_LIMP = False  # [phi-mac] set by --leaders_limp: leaders never torqued or moved
+_STOP_AFTER_SAVE = False  # [phi-mac] first Ctrl-C: save the episode, then end the session
+
+
+def _sigint_save_then_stop(signum, frame) -> None:
+    """[phi-mac] First Ctrl-C saves the running episode and ends the session; a second one stops at once."""
+    global _STOP_AFTER_SAVE
+    if _STOP_AFTER_SAVE:
+        raise KeyboardInterrupt
+    _STOP_AFTER_SAVE = True
+    print("\n  Ctrl-C: saving this episode, then stopping (Ctrl-C again to stop without saving)", flush=True)
 
 
 def _CAMERA_ROUTING_USED() -> dict:
@@ -751,6 +762,8 @@ def _record_episodes(robot, teleop, dataset, policy_client, kb, args) -> None:
                 t0 = time.perf_counter()
 
                 ev = kb.poll()
+                if _STOP_AFTER_SAVE:  # [phi-mac] Ctrl-C: save (or drop an empty episode), then stop
+                    ev = "RIGHT" if frame_count else "ESC"
                 if args.max_episode_s and frame_count and time.time() - episode_t0 >= args.max_episode_s:  # [phi-mac]
                     _status(_YELLOW, "!!", f"--max_episode_s {args.max_episode_s:.0f} reached: saving the episode")
                     ev = "RIGHT"  # saved like the right-arrow key (with --episodes 1 the session then ends)
@@ -860,6 +873,8 @@ def _record_episodes(robot, teleop, dataset, policy_client, kb, args) -> None:
                 recorded += 1
                 pending_ep_idx += 1
                 _disable_leader_torque(teleop)
+                if _STOP_AFTER_SAVE:  # [phi-mac]
+                    break
                 if recorded < args.episodes:
                     kb.drain()
                     if _reset_phase(robot, teleop, kb,
@@ -1102,6 +1117,8 @@ def main() -> int:
             flush=True)
 
     try:
+        if not args.dry_run:  # [phi-mac]
+            signal.signal(signal.SIGINT, _sigint_save_then_stop)
         _record_episodes(robot, teleop, dataset, policy_client, kb, args)
     finally:
         log.info("Cleaning up...")
