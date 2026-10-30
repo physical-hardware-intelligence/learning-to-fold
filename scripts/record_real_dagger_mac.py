@@ -453,6 +453,13 @@ class PolicyClient:
 # ---------------------------------------------------------------------------
 
 _DRY_RUN = False  # [phi-mac] set by --dry_run
+_LEADERS_LIMP = False  # [phi-mac] set by --leaders_limp: leaders never torqued or moved
+
+
+def _CAMERA_ROUTING_USED() -> dict:
+    """[phi-mac] the camera routing after any dry-run removals (see main)."""
+    import real_robot_config as _rrc
+    return _rrc._CAMERA_ROUTING
 
 
 def _guard_configure(arm, never_torque: bool) -> None:
@@ -479,7 +486,7 @@ def _guard_configure(arm, never_torque: bool) -> None:
 
 
 def _enable_leader_torque(teleop, obs: dict) -> None:
-    if _DRY_RUN:  # [phi-mac]
+    if _DRY_RUN or _LEADERS_LIMP:  # [phi-mac]
         return
     _mirror_to_leaders(teleop, obs)
     teleop.left_arm.bus.enable_torque()
@@ -494,7 +501,7 @@ def _disable_leader_torque(teleop) -> None:
 
 
 def _mirror_to_leaders(teleop, obs: dict) -> None:
-    if _DRY_RUN:  # [phi-mac]
+    if _DRY_RUN or _LEADERS_LIMP:  # [phi-mac]
         return
     left = {k.removeprefix("left_").removesuffix(".pos"): v
             for k, v in obs.items()
@@ -509,6 +516,18 @@ def _mirror_to_leaders(teleop, obs: dict) -> None:
 # ---------------------------------------------------------------------------
 # Safe rest ramp
 # ---------------------------------------------------------------------------
+
+def _ramp_to(robot, target_vec12: np.ndarray, ramp_time: float = 4.0, hz: int = 30) -> None:
+    """[phi-mac] Straight-line ramp of all 12 joints to target, then hold it. Used on exit to put the arms back where
+    they started before torque goes off (upstream's disconnect drops them wherever they are)."""
+    cur = state_dict_to_vec12(robot.get_observation()).astype(np.float64)
+    target = np.asarray(target_vec12, np.float64)
+    n = max(1, int(round(ramp_time * hz)))
+    for step in range(1, n + 1):
+        robot.send_action(vec12_to_action_dict((cur + (step / n) * (target - cur)).astype(np.float32)))
+        time.sleep(1.0 / hz)
+    time.sleep(0.5)
+
 
 def _ramp_to_safe_rest(robot, ramp_time: float = 4.0, hz: int = 30) -> None:
     cur = state_dict_to_vec12(robot.get_observation()).astype(np.float64)
@@ -720,6 +739,9 @@ def _record_episodes(robot, teleop, dataset, policy_client, kb, args) -> None:
                 t0 = time.perf_counter()
 
                 ev = kb.poll()
+                if args.max_episode_s and frame_count >= args.max_episode_s * args.fps:  # [phi-mac] first-run timer
+                    _status(_YELLOW, "!!", f"--max_episode_s {args.max_episode_s:.0f} reached: stopping")
+                    ev = "ESC"
                 if ev == "ESC":
                     _banner(_BG_RED + _WHITE, "STOPPED",
                             "Session ended by operator")
@@ -920,6 +942,10 @@ def main() -> int:
     ap.add_argument("--top_crop", type=float, default=1.0,
                     help="[phi-mac] send the top camera's centre fraction scaled to 1280x720: 0.794 turns our EMEET C960 "
                          "(set to 1920x1080) into the organisers' D435 view at 73.5 cm (matched on their frame, 2026-10-26)")
+    ap.add_argument("--max_episode_s", type=float, default=None,
+                    help="[phi-mac] stop the session after this many seconds of an episode (first powered runs)")
+    ap.add_argument("--leaders_limp", action="store_true",
+                    help="[phi-mac] never torque or move the leaders (no takeover); for first powered runs")
     ap.add_argument("--dry_run", action="store_true",
                     help="[phi-mac] everything runs, nothing moves. Saved under <datasets_root>/_dryrun")
     ap.add_argument("--camera_reset", action="store_true",
@@ -974,6 +1000,14 @@ def main() -> int:
             yaml_cfg["cameras"].pop(k)
         log.warning("DRY RUN: cameras %s not fitted, sent to the model as black frames", missing_cams)
     robot_cfg = build_bi_so_follower_config(yaml_cfg, args.robot_id, use_degrees=True)
+    # [phi-mac] cameras.<name>.rotation (0/90/180/-90): our wrist cameras sit 180 deg from the organisers' (their
+    # fingers at the bottom, pointing up; ours at the top). Applied by lerobot on every read: model and recordings.
+    from lerobot.cameras.configs import Cv2Rotation
+    for yaml_key, (side, sub) in _CAMERA_ROUTING_USED().items():
+        rot = (yaml_cfg["cameras"].get(yaml_key) or {}).get("rotation")
+        if rot:
+            getattr(robot_cfg, f"{side}_arm_config").cameras[sub].rotation = Cv2Rotation(int(rot))
+            log.info("camera %s rotated %s deg", yaml_key, rot)
     if args.max_relative_target is not None:  # [phi-mac]
         robot_cfg.left_arm_config.max_relative_target = args.max_relative_target
         robot_cfg.right_arm_config.max_relative_target = args.max_relative_target
@@ -996,6 +1030,15 @@ def main() -> int:
         robot.right_arm.bus.disable_torque()
         robot.send_action = lambda action: action
         log.warning("DRY RUN: followers limp, leaders never torqued, nothing moves")
+
+    start_pose = None
+    if not args.dry_run:  # [phi-mac] where the arms rest now: they go back here before torque off
+        start_pose = state_dict_to_vec12(robot.get_observation())
+        log.info("Start pose saved; on any stop the arms ramp back to it over 4 s, then torque off")
+    if args.leaders_limp:  # [phi-mac]
+        global _LEADERS_LIMP
+        _LEADERS_LIMP = True
+        log.warning("Leaders stay limp: no mirroring, no takeover (Space does nothing useful)")
 
     log.info("Connecting leader arms...")
     teleop = make_teleoperator_from_config(leader_cfg)
@@ -1062,6 +1105,12 @@ def main() -> int:
             teleop.disconnect()
         except Exception:
             pass
+        if start_pose is not None:  # [phi-mac] back to the start pose, slowly, before torque goes off
+            try:
+                log.info("Returning the arms to their start pose (4 s)...")
+                _ramp_to(robot, start_pose)
+            except Exception as e:
+                log.error("Could not ramp back (%s): torque goes off where the arms are", e)
         try:
             robot.disconnect()
         except Exception:
