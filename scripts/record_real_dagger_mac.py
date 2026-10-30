@@ -490,19 +490,29 @@ def _guard_configure(arm, never_torque: bool) -> None:
     Measured 2026-10-27, motors off: right follower goals ~270 deg from present on 5 joints, left up to 116 deg.
     Here goal = present while limp, before anything can turn torque on; with never_torque (dry runs) torque stays off."""
     configure = arm.configure
+    bus_write = arm.bus.write
+
+    def write_with_retries(*args, num_retry: int = 0, **kwargs):
+        # a single garbled status packet failed connect twice on the right follower (10-27 id 3, 10-29 id 2)
+        # while 200/200 reads afterwards were clean; Squint's runner retries bus calls the same way
+        return bus_write(*args, num_retry=max(num_retry, 3), **kwargs)
 
     def guarded() -> None:
+        arm.bus.write = write_with_retries
         arm.bus.disable_torque()
         arm.bus.sync_write("Goal_Position", arm.bus.sync_read("Present_Position", normalize=False), normalize=False)
-        if not never_torque:
-            configure()
-            return
-        enable = arm.bus.enable_torque
-        arm.bus.enable_torque = lambda *a, **k: None
         try:
-            configure()
+            if not never_torque:
+                configure()
+                return
+            enable = arm.bus.enable_torque
+            arm.bus.enable_torque = lambda *a, **k: None
+            try:
+                configure()
+            finally:
+                arm.bus.enable_torque = enable
         finally:
-            arm.bus.enable_torque = enable
+            arm.bus.write = bus_write
 
     arm.configure = guarded
 
