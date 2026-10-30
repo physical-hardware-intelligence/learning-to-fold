@@ -746,8 +746,8 @@ def _record_episodes(robot, teleop, dataset, policy_client, kb, args) -> None:
 
                 ev = kb.poll()
                 if args.max_episode_s and frame_count >= args.max_episode_s * args.fps:  # [phi-mac] first-run timer
-                    _status(_YELLOW, "!!", f"--max_episode_s {args.max_episode_s:.0f} reached: stopping")
-                    ev = "ESC"
+                    _status(_YELLOW, "!!", f"--max_episode_s {args.max_episode_s:.0f} reached: saving the episode")
+                    ev = "RIGHT"  # saved like the right-arrow key (with --episodes 1 the session then ends)
                 if ev == "ESC":
                     _banner(_BG_RED + _WHITE, "STOPPED",
                             "Session ended by operator")
@@ -949,7 +949,7 @@ def main() -> int:
                     help="[phi-mac] send the top camera's centre fraction scaled to 1280x720: 0.794 turns our EMEET C960 "
                          "(set to 1920x1080) into the organisers' D435 view at 73.5 cm (matched on their frame, 2026-10-26)")
     ap.add_argument("--max_episode_s", type=float, default=None,
-                    help="[phi-mac] stop the session after this many seconds of an episode (first powered runs)")
+                    help="[phi-mac] save the episode after this many seconds of it (counted in frames at --fps); first powered runs")
     ap.add_argument("--leaders_limp", action="store_true",
                     help="[phi-mac] never torque or move the leaders (no takeover); for first powered runs")
     ap.add_argument("--dry_run", action="store_true",
